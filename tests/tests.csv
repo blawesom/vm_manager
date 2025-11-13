@@ -1,0 +1,7 @@
+test_ID,Workflow,Step,Test Description,Success Criteria
+A001,VM Lifecycle,Create VM,1. INTEL receives POST /vms (Create VM). 2. VM_OPERATOR is triggered. 3. QEMU process is started.,The VM object is created in the STATES DB with a unique ID and state='running'.
+A002,VM Lifecycle,Stop & Check,1. INTEL receives POST /vms/{id}/stop. 2. VM_OPERATOR halts the QEMU process.,The VM object's state in the STATES DB is updated to state='stopped'.
+A003,VM Lifecycle,Restart,Call POST /vms/{id}/restart on a stopped VM.,"The VM object's state returns to state='running', and VM_OPERATOR logs the startup."
+B001,Storage Management,Attach Disk,1. Create a VM (running). 2. Create a Disk (available). 3. INTEL receives POST /vms/{id}/attach_disk.,"The Disk object in STATES DB is updated with the associated VM ID and a valid mount_point (e.g., /dev/xvdb)."
+C001,Storage Management,Detach Disk,Call POST /vms/{id}/detach_disk on a running VM with an attached disk.,The Disk object in STATES DB reverts its state to state='available' and clears the associated VM ID.
+D001,Data Coherence,DB vs QEMU,1. Force the VM state in STATES to 'running'. 2. Manually shut down the corresponding QEMU process (skip INTEL). 3. Run the OBSERVER check loop.,The OBSERVER detects the discrepancy and corrects the state in STATES DB to state='stopped'.
