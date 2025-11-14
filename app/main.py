@@ -43,8 +43,26 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-# Initialize operator and observer
-_operator = operator.LocalOperator()
+# Initialize network manager and operator
+from . import network_manager
+
+# Network configuration from environment
+_vlan_id = int(os.environ.get("VMAN_VLAN_ID", "100"))
+_bridge_name = os.environ.get("VMAN_BRIDGE_NAME", "br-vman")
+_subnet = os.environ.get("VMAN_SUBNET", "192.168.100.0/24")
+_gateway = os.environ.get("VMAN_GATEWAY")  # Optional, defaults to first IP
+_dns = os.environ.get("VMAN_DNS", "8.8.8.8,8.8.4.4").split(",") if os.environ.get("VMAN_DNS") else None
+
+_network_manager = network_manager.NetworkManager(
+    vlan_id=_vlan_id,
+    bridge_name=_bridge_name,
+    subnet=_subnet,
+    gateway=_gateway,
+    dns=_dns,
+    dry_run=os.environ.get("VMAN_OPERATOR_DRY_RUN") == "1"
+)
+
+_operator = operator.LocalOperator(network_manager=_network_manager)
 _observer: Optional[observer.LocalObserver] = None
 
 
@@ -173,6 +191,25 @@ def observer_status():
             }
             for issue in _observer.last_issues
         ]
+    }
+
+
+@app.get("/network/config", tags=["network"])
+def get_network_config():
+    """Get current network configuration."""
+    global _network_manager
+    if not _network_manager:
+        return {"status": "not_configured"}
+    
+    config = _network_manager.get_network_config()
+    return {
+        "vlan_id": config.vlan_id,
+        "bridge_name": config.bridge_name,
+        "subnet": config.subnet,
+        "gateway": config.gateway,
+        "dns": config.dns,
+        "allocated_ips": list(_network_manager.get_allocated_ips()),
+        "available_ips": len(list(_network_manager.subnet.hosts())) - len(_network_manager.reserved_ips) - len(_network_manager.get_allocated_ips())
     }
 
 
@@ -349,6 +386,14 @@ def start_vm(vm_id: str, db: Session = Depends(get_db)):
             ram_gb=template.ram_amount
         )
         vm.state = "running"
+        
+        # Get assigned IP address if available
+        if _network_manager:
+            vm_dir = Path(_operator.storage_path) / "vms" / vm_id
+            ip_file = vm_dir / "ip.txt"
+            if ip_file.exists():
+                vm.local_ip = ip_file.read_text().strip()
+        
         db.commit()
     except operator.OperatorError as e:
         vm.state = "error"
@@ -406,6 +451,14 @@ def restart_vm(vm_id: str, db: Session = Depends(get_db)):
             ram_gb=template.ram_amount
         )
         vm.state = "running"
+        
+        # Get assigned IP address if available
+        if _network_manager:
+            vm_dir = Path(_operator.storage_path) / "vms" / vm_id
+            ip_file = vm_dir / "ip.txt"
+            if ip_file.exists():
+                vm.local_ip = ip_file.read_text().strip()
+        
         db.commit()
     except operator.OperatorError as e:
         vm.state = "error"

@@ -23,6 +23,8 @@ from . import logging_config
 
 logger = logging_config.UnifiedLogger.get_logger(__name__, logging_config.UnifiedLogger.SERVICE_OPERATOR)
 
+# Network manager will be imported when needed to avoid circular imports
+
 
 class OperatorError(RuntimeError):
     pass
@@ -84,13 +86,15 @@ class LocalOperator(OperatorInterface):
     - Filesystem operations use pathlib and os.
     """
 
-    def __init__(self, dry_run: bool = False, storage_path: Optional[Path] = None):
+    def __init__(self, dry_run: bool = False, storage_path: Optional[Path] = None, network_manager=None):
         self.qemu_img = shutil.which("qemu-img")
         self.qemu_bin = shutil.which("qemu-system-x86_64") or shutil.which("qemu-kvm")
         self.dry_run = bool(dry_run or os.environ.get("VMAN_OPERATOR_DRY_RUN") == "1")
         self.storage_path = Path(storage_path or os.environ.get("VMAN_STORAGE_PATH", "/var/lib/vman"))
-        logger.debug("LocalOperator init: qemu-img=%s qemu-bin=%s storage=%s dry_run=%s",
-                    self.qemu_img, self.qemu_bin, self.storage_path, self.dry_run)
+        self.network_manager = network_manager
+        logger.debug("LocalOperator init: qemu-img=%s qemu-bin=%s storage=%s dry_run=%s network=%s",
+                    self.qemu_img, self.qemu_bin, self.storage_path, self.dry_run,
+                    "enabled" if network_manager else "disabled")
     
     def _get_vm_dir(self, vm_id: str) -> Path:
         """Get VM-specific directory."""
@@ -253,6 +257,38 @@ class LocalOperator(OperatorInterface):
         pid_file = self._get_vm_pid_file(vm_id)
         log_file = vm_dir / "qemu.log"
         
+        # Network configuration
+        tap_name = None
+        vm_ip = None
+        if self.network_manager and not self.dry_run:
+            try:
+                # Check if VM had a previous IP assignment
+                ip_file = vm_dir / "ip.txt"
+                previous_ip = ip_file.read_text().strip() if ip_file.exists() else None
+                
+                # Ensure bridge exists
+                self.network_manager.ensure_bridge()
+                # Create TAP interface
+                tap_name = self.network_manager.create_tap_interface(vm_id)
+                
+                # Allocate IP address (reuse previous if available and not allocated)
+                if previous_ip and previous_ip not in self.network_manager.get_allocated_ips():
+                    vm_ip = previous_ip
+                    self.network_manager.allocated_ips.add(vm_ip)
+                    logger.info(f"Reusing previous IP {vm_ip} for VM {vm_id}")
+                else:
+                    vm_ip = self.network_manager.allocate_ip(vm_id)
+                
+                # Store IP in VM directory for reference
+                (vm_dir / "ip.txt").write_text(vm_ip)
+                (vm_dir / "tap.txt").write_text(tap_name)
+            except Exception as e:
+                logger.warning(f"Failed to setup network for VM {vm_id}: {e}, falling back to user-mode")
+                # Fall back to user-mode networking
+                tap_name = None
+                vm_ip = None
+        
+        # Build QEMU command
         cmd = [
             self.qemu_bin,
             "-name", vm_id,
@@ -261,14 +297,30 @@ class LocalOperator(OperatorInterface):
             "-smp", str(cpu_count),
             "-m", f"{ram_gb}G",
             "-drive", f"file={qcow2_path},format=qcow2,if=virtio,id=drive0",
-            "-netdev", "user,id=net0,hostfwd=tcp::0-:22",
-            "-device", "virtio-net,netdev=net0",
             "-monitor", f"unix:{qmp_sock},server,nowait",
             "-daemonize",
             "-pidfile", str(pid_file),
             "-no-reboot",
             "-display", "none",
         ]
+        
+        # Add network configuration
+        if tap_name:
+            # Generate unique MAC address based on VM ID
+            import hashlib
+            mac_hash = hashlib.md5(vm_id.encode()).hexdigest()[:6]
+            mac = f"52:54:{mac_hash[0:2]}:{mac_hash[2:4]}:{mac_hash[4:6]}:00"
+            # Use TAP interface with bridge
+            cmd.extend([
+                "-netdev", f"tap,id=net0,ifname={tap_name},script=no,downscript=no",
+                "-device", f"virtio-net,netdev=net0,mac={mac}"
+            ])
+        else:
+            # Fall back to user-mode networking
+            cmd.extend([
+                "-netdev", "user,id=net0,hostfwd=tcp::0-:22",
+                "-device", "virtio-net,netdev=net0"
+            ])
         
         # Execute
         try:
@@ -290,10 +342,28 @@ class LocalOperator(OperatorInterface):
                 raise OperatorError("VM process not found after start")
             
             logger.info(f"Started VM {vm_id} (PID: {pid_file.read_text().strip()})")
+            if vm_ip:
+                logger.info(f"VM {vm_id} assigned IP: {vm_ip}")
             
         except subprocess.TimeoutExpired:
+            # Cleanup network resources on failure
+            if tap_name and self.network_manager:
+                try:
+                    self.network_manager.delete_tap_interface(tap_name)
+                    if vm_ip:
+                        self.network_manager.release_ip(vm_ip)
+                except Exception:
+                    pass
             raise OperatorError("QEMU start timed out")
         except Exception as e:
+            # Cleanup network resources on failure
+            if tap_name and self.network_manager:
+                try:
+                    self.network_manager.delete_tap_interface(tap_name)
+                    if vm_ip:
+                        self.network_manager.release_ip(vm_ip)
+                except Exception:
+                    pass
             raise OperatorError(f"Failed to start VM: {e}")
 
     def stop_vm(self, vm_id: str, force: bool = False) -> None:
@@ -343,6 +413,22 @@ class LocalOperator(OperatorInterface):
                 logger.info(f"VM {vm_id} force-killed")
             except ProcessLookupError:
                 pass
+        
+        # Cleanup network resources
+        if self.network_manager:
+            vm_dir = self._get_vm_dir(vm_id)
+            tap_file = vm_dir / "tap.txt"
+            ip_file = vm_dir / "ip.txt"
+            
+            if tap_file.exists():
+                tap_name = tap_file.read_text().strip()
+                self.network_manager.delete_tap_interface(tap_name)
+                tap_file.unlink(missing_ok=True)
+            
+            if ip_file.exists():
+                vm_ip = ip_file.read_text().strip()
+                self.network_manager.release_ip(vm_ip)
+                ip_file.unlink(missing_ok=True)
         
         # Cleanup
         pid_file.unlink(missing_ok=True)
