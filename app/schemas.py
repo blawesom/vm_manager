@@ -12,11 +12,11 @@ class VMTemplate(BaseModel):
     ram_amount: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class VMCreate(BaseModel):
     template_name: str
-    name: Optional[str]
+    name: Optional[str] = None
 
 class VM(BaseModel):
     id: str
@@ -25,11 +25,11 @@ class VM(BaseModel):
     local_ip: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class DiskCreate(BaseModel):
     size: int = Field(..., ge=1)
-    mount_point: Optional[str]
+    mount_point: Optional[str] = None
 
 class Disk(BaseModel):
     id: str
@@ -38,4 +38,4 @@ class Disk(BaseModel):
     state: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True

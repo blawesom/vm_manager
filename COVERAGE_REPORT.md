@@ -391,7 +391,35 @@
 - ⚠️ Integration tests with real QEMU (requires QEMU installation)
 
 **Requirement:** "Global service test with 80% coverage"  
-**Current:** Comprehensive test suite implemented (~70-80% estimated coverage pending execution)
+**Current:** Test suite executed - **51% coverage** (Target: 80%)
+
+**Coverage by Module:**
+- `app/models.py`: **100%** ✅
+- `app/schemas.py`: **100%** ✅
+- `app/db.py`: **100%** ✅
+- `app/logging_config.py`: **86%** ✅
+- `app/observer.py`: **77%** ⚠️
+- `app/main.py`: **48%** ❌
+- `app/network_manager.py`: **36%** ❌
+- `app/operator.py`: **26%** ❌
+
+**Test Results:**
+- Tests executed: 83 tests
+- Tests passed: 56 tests ✅
+- Tests failed: 27 tests ❌
+- Coverage: 51% (1060 statements, 521 missing)
+
+**Coverage Gaps:**
+- `app/main.py`: Many endpoints not fully tested (network config, error paths)
+- `app/operator.py`: QEMU operations not tested (requires real QEMU or better mocking)
+- `app/network_manager.py`: Network operations not tested (requires root/CAP_NET_ADMIN)
+
+**Next Steps to Reach 80% Coverage:**
+1. Add tests for network configuration endpoints
+2. Add tests for error handling paths in main.py
+3. Add better mocking for operator QEMU operations
+4. Add integration tests with real QEMU (optional)
+5. Add tests for network manager operations (with proper permissions or mocking)
 
 ---
 

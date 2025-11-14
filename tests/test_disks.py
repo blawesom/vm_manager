@@ -1,6 +1,7 @@
 """Unit tests for disk endpoints with safety and security verification."""
 import pytest
 import os
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app import db, models
@@ -18,8 +19,12 @@ def setup_db():
     models.Base.metadata.drop_all(bind=db.engine)
 
 
-def test_create_disk_success():
+@patch('app.main._operator')
+def test_create_disk_success(mock_operator):
     """Test successful disk creation."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     response = client.post("/disks", json={"size": 10})
     assert response.status_code == 201
     data = response.json()
@@ -28,8 +33,12 @@ def test_create_disk_success():
     assert "id" in data
 
 
-def test_create_disk_with_mount_point():
+@patch('app.main._operator')
+def test_create_disk_with_mount_point(mock_operator):
     """Test disk creation with mount point."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     response = client.post("/disks", json={"size": 20, "mount_point": "/dev/xvdb"})
     assert response.status_code == 201
     assert response.json()["mount_point"] == "/dev/xvdb"
@@ -54,8 +63,12 @@ def test_list_disks_empty():
     assert response.json() == []
 
 
-def test_list_disks_multiple():
+@patch('app.main._operator')
+def test_list_disks_multiple(mock_operator):
     """Test listing multiple disks."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     client.post("/disks", json={"size": 10})
     client.post("/disks", json={"size": 20})
     
@@ -65,8 +78,12 @@ def test_list_disks_multiple():
     assert len(data) == 2
 
 
-def test_get_disk_success():
+@patch('app.main._operator')
+def test_get_disk_success(mock_operator):
     """Test getting disk details."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     create_response = client.post("/disks", json={"size": 10})
     disk_id = create_response.json()["id"]
     
@@ -81,8 +98,13 @@ def test_get_disk_not_found():
     assert response.status_code == 404
 
 
-def test_delete_disk_success():
+@patch('app.main._operator')
+def test_delete_disk_success(mock_operator):
     """Test successful disk deletion."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    mock_operator.delete_disk_image = MagicMock()
+    
     create_response = client.post("/disks", json={"size": 10})
     disk_id = create_response.json()["id"]
     
@@ -96,8 +118,12 @@ def test_delete_disk_not_found():
     assert response.status_code == 404
 
 
-def test_delete_attached_disk():
+@patch('app.main._operator')
+def test_delete_attached_disk(mock_operator):
     """Test deleting attached disk fails."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     # Create disk and mark as attached
     create_response = client.post("/disks", json={"size": 10})
     disk_id = create_response.json()["id"]
@@ -116,8 +142,12 @@ def test_delete_attached_disk():
     assert "attached" in response.json()["detail"].lower()
 
 
-def test_attach_disk_missing_vm_id():
+@patch('app.main._operator')
+def test_attach_disk_missing_vm_id(mock_operator):
     """Test attaching disk without VM ID."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     create_response = client.post("/disks", json={"size": 10})
     disk_id = create_response.json()["id"]
     
@@ -126,8 +156,12 @@ def test_attach_disk_missing_vm_id():
     assert "vm_id" in response.json()["detail"].lower()
 
 
-def test_attach_disk_vm_not_found():
+@patch('app.main._operator')
+def test_attach_disk_vm_not_found(mock_operator):
     """Test attaching disk to non-existent VM."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     create_response = client.post("/disks", json={"size": 10})
     disk_id = create_response.json()["id"]
     
@@ -135,8 +169,12 @@ def test_attach_disk_vm_not_found():
     assert response.status_code == 404
 
 
-def test_attach_disk_already_attached():
+@patch('app.main._operator')
+def test_attach_disk_already_attached(mock_operator):
     """Test attaching already attached disk."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     create_response = client.post("/disks", json={"size": 10})
     disk_id = create_response.json()["id"]
     
@@ -155,8 +193,12 @@ def test_attach_disk_already_attached():
     assert "already attached" in response.json()["detail"].lower()
 
 
-def test_detach_disk_not_attached():
+@patch('app.main._operator')
+def test_detach_disk_not_attached(mock_operator):
     """Test detaching disk that's not attached."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.create_disk_image = MagicMock()
+    
     create_response = client.post("/disks", json={"size": 10})
     disk_id = create_response.json()["id"]
     

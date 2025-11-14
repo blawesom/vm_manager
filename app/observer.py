@@ -239,7 +239,7 @@ class LocalObserver(ObserverInterface):
                         pass
         
         return vm_ids
-    
+
     def _get_running_qemu_pids(self) -> List[int]:
         """Get list of running QEMU process IDs using pgrep or ps.
 

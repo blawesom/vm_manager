@@ -1,6 +1,7 @@
 """Unit tests for VM endpoints with safety and security verification."""
 import pytest
 import os
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app import db, models, operator
@@ -25,8 +26,11 @@ def template():
     return {"name": "test"}
 
 
-def test_create_vm_success(template):
+@patch('app.main._operator')
+def test_create_vm_success(template, mock_operator):
     """Test successful VM creation."""
+    mock_operator.storage_path = "/tmp/test"
+    
     response = client.post("/vms", json={"template_name": "test"})
     assert response.status_code == 201
     data = response.json()
@@ -35,8 +39,11 @@ def test_create_vm_success(template):
     assert "id" in data
 
 
-def test_create_vm_with_name(template):
+@patch('app.main._operator')
+def test_create_vm_with_name(template, mock_operator):
     """Test VM creation with custom name."""
+    mock_operator.storage_path = "/tmp/test"
+    
     response = client.post("/vms", json={"template_name": "test", "name": "my-vm"})
     assert response.status_code == 201
     assert response.json()["id"] == "my-vm"
@@ -90,8 +97,12 @@ def test_get_vm_not_found():
     assert response.status_code == 404
 
 
-def test_delete_vm_success(template):
+@patch('app.main._operator')
+def test_delete_vm_success(template, mock_operator):
     """Test successful VM deletion."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.stop_vm = MagicMock()
+    
     create_response = client.post("/vms", json={"template_name": "test"})
     vm_id = create_response.json()["id"]
     
@@ -105,8 +116,14 @@ def test_delete_vm_not_found():
     assert response.status_code == 404
 
 
-def test_start_vm_success(template):
+@patch('app.main._operator')
+@patch('app.main._network_manager')
+def test_start_vm_success(template, mock_network, mock_operator):
     """Test starting a VM."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.start_vm = MagicMock()
+    mock_network = None  # No network manager
+    
     create_response = client.post("/vms", json={"template_name": "test"})
     vm_id = create_response.json()["id"]
     
@@ -115,8 +132,11 @@ def test_start_vm_success(template):
     assert response.status_code in [202, 400]  # 400 if QEMU not available, 202 if dry-run works
 
 
-def test_start_vm_already_running(template):
+@patch('app.main._operator')
+def test_start_vm_already_running(template, mock_operator):
     """Test starting an already running VM."""
+    mock_operator.storage_path = "/tmp/test"
+    
     create_response = client.post("/vms", json={"template_name": "test"})
     vm_id = create_response.json()["id"]
     
@@ -134,8 +154,11 @@ def test_start_vm_already_running(template):
     assert "already running" in response.json()["detail"].lower()
 
 
-def test_stop_vm_not_running(template):
+@patch('app.main._operator')
+def test_stop_vm_not_running(template, mock_operator):
     """Test stopping a VM that's not running."""
+    mock_operator.storage_path = "/tmp/test"
+    
     create_response = client.post("/vms", json={"template_name": "test"})
     vm_id = create_response.json()["id"]
     
@@ -144,8 +167,15 @@ def test_stop_vm_not_running(template):
     assert "not running" in response.json()["detail"].lower()
 
 
-def test_restart_vm_success(template):
+@patch('app.main._operator')
+@patch('app.main._network_manager')
+def test_restart_vm_success(template, mock_network, mock_operator):
     """Test restarting a VM."""
+    mock_operator.storage_path = "/tmp/test"
+    mock_operator.stop_vm = MagicMock()
+    mock_operator.start_vm = MagicMock()
+    mock_network = None
+    
     create_response = client.post("/vms", json={"template_name": "test"})
     vm_id = create_response.json()["id"]
     

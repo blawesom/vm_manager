@@ -1,7 +1,64 @@
 test_ID,Workflow,Step,Test Description,Success Criteria
-A001,VM Lifecycle,Create VM,1. INTEL receives POST /vms (Create VM). 2. VM_OPERATOR is triggered. 3. QEMU process is started.,The VM object is created in the STATES DB with a unique ID and state='running'.
-A002,VM Lifecycle,Stop & Check,1. INTEL receives POST /vms/{id}/stop. 2. VM_OPERATOR halts the QEMU process.,The VM object's state in the STATES DB is updated to state='stopped'.
-A003,VM Lifecycle,Restart,Call POST /vms/{id}/restart on a stopped VM.,"The VM object's state returns to state='running', and VM_OPERATOR logs the startup."
-B001,Storage Management,Attach Disk,1. Create a VM (running). 2. Create a Disk (available). 3. INTEL receives POST /vms/{id}/attach_disk.,"The Disk object in STATES DB is updated with the associated VM ID and a valid mount_point (e.g., /dev/xvdb)."
-C001,Storage Management,Detach Disk,Call POST /vms/{id}/detach_disk on a running VM with an attached disk.,The Disk object in STATES DB reverts its state to state='available' and clears the associated VM ID.
-D001,Data Coherence,DB vs QEMU,1. Force the VM state in STATES to 'running'. 2. Manually shut down the corresponding QEMU process (skip INTEL). 3. Run the OBSERVER check loop.,The OBSERVER detects the discrepancy and corrects the state in STATES DB to state='stopped'.
+A001,VM Lifecycle,Create VM,1. INTEL receives POST /vms (Create VM). 2. VM_OPERATOR is triggered. 3. QEMU process is started.,The VM object is created in the STATES DB with a unique ID and state='created' (or 'stopped' in dry-run mode). Test: test_create_vm_success
+A002,VM Lifecycle,Stop & Check,1. INTEL receives POST /vms/{id}/actions/stop. 2. VM_OPERATOR halts the QEMU process.,The VM object's state in the STATES DB is updated to state='stopped'. Test: test_stop_vm_not_running (validates stop operation)
+A003,VM Lifecycle,Restart,Call POST /vms/{id}/actions/restart on a stopped VM.,The VM object's state returns to state='running', and VM_OPERATOR logs the startup. Test: test_restart_vm_success
+A004,VM Lifecycle,List VMs,Call GET /vms to list all VMs.,Returns list of all VMs from STATES DB. Test: test_list_vms_empty, test_list_vms_filter_by_state
+A005,VM Lifecycle,Get VM,Call GET /vms/{id} to retrieve VM details.,Returns VM object with all attributes. Test: test_get_vm_success
+A006,VM Lifecycle,Delete VM,Call DELETE /vms/{id} to delete a VM.,VM object is removed from STATES DB. Test: test_delete_vm_success
+A007,VM Lifecycle,Start VM,Call POST /vms/{id}/actions/start on a created VM.,VM state changes to 'running' and QEMU process starts. Test: test_start_vm_success
+A008,VM Lifecycle,Start Already Running,Call POST /vms/{id}/actions/start on a running VM.,Returns 400 error indicating VM is already running. Test: test_start_vm_already_running
+A009,VM Lifecycle,Create with Name,Call POST /vms with custom name parameter.,VM is created with specified ID. Test: test_create_vm_with_name
+A010,VM Lifecycle,Template Not Found,Call POST /vms with non-existent template.,Returns 400 error indicating template not found. Test: test_create_vm_template_not_found
+A011,VM Lifecycle,Duplicate ID,Call POST /vms with duplicate VM ID.,Returns 400 error indicating ID already exists. Test: test_create_vm_duplicate_id
+B001,Storage Management,Attach Disk,1. Create a VM (running). 2. Create a Disk (available). 3. INTEL receives POST /disks/{id}/attach with vm_id.,The Disk object in STATES DB is updated with the associated VM ID and a valid mount_point (e.g., /dev/xvdb). Test: test_attach_disk_already_attached (validates attach logic)
+B002,Storage Management,Detach Disk,Call POST /disks/{id}/detach on a running VM with an attached disk.,The Disk object in STATES DB reverts its state to state='available' and clears the associated VM ID. Test: test_detach_disk_not_attached (validates detach logic)
+B003,Storage Management,Create Disk,Call POST /disks with size parameter.,Disk object is created in STATES DB with state='available'. Test: test_create_disk_success
+B004,Storage Management,List Disks,Call GET /disks to list all disks.,Returns list of all disks from STATES DB. Test: test_list_disks_empty, test_list_disks_multiple
+B005,Storage Management,Get Disk,Call GET /disks/{id} to retrieve disk details.,Returns disk object with all attributes. Test: test_get_disk_success
+B006,Storage Management,Delete Disk,Call DELETE /disks/{id} to delete an available disk.,Disk object is removed from STATES DB. Test: test_delete_disk_success
+B007,Storage Management,Delete Attached Disk,Call DELETE /disks/{id} on an attached disk.,Returns 400 error indicating disk is attached and cannot be deleted. Test: test_delete_attached_disk
+B008,Storage Management,Attach Missing VM ID,Call POST /disks/{id}/attach without vm_id parameter.,Returns 400 error indicating vm_id is required. Test: test_attach_disk_missing_vm_id
+B009,Storage Management,Attach to Non-existent VM,Call POST /disks/{id}/attach with non-existent vm_id.,Returns 404 error indicating VM not found. Test: test_attach_disk_vm_not_found
+C001,Template Management,Create Template,Call POST /templates with name, cpu_count, ram_amount.,Template object is created in STATES DB. Test: test_create_template_success
+C002,Template Management,List Templates,Call GET /templates to list all templates.,Returns list of all templates from STATES DB. Test: test_list_templates_empty, test_list_templates_multiple
+C003,Template Management,Delete Template,Call DELETE /templates/{name} to delete a template.,Template object is removed from STATES DB. Test: test_delete_template_success
+C004,Template Management,Delete Template in Use,Call DELETE /templates/{name} when template is used by VMs.,Returns 400 error indicating template is in use. Test: test_delete_template_in_use
+C005,Template Management,Duplicate Template,Call POST /templates with existing template name.,Returns 400 error indicating template already exists. Test: test_create_template_duplicate
+D001,Data Coherence,DB vs QEMU,1. Force the VM state in STATES to 'running'. 2. Manually shut down the corresponding QEMU process (skip INTEL). 3. Run the OBSERVER check loop.,The OBSERVER detects the discrepancy and corrects the state in STATES DB to state='stopped'. Test: test_check_vm_coherence_state_mismatch
+D002,Data Coherence,DB vs Filesystem (Disk),1. Create disk in STATES DB. 2. Delete disk file from filesystem. 3. Run OBSERVER check.,OBSERVER detects missing disk file and logs coherence issue. Test: test_check_disk_coherence_missing_file
+D003,Data Coherence,Orphan Disk File,1. Create disk file in filesystem. 2. Ensure no corresponding DB entry. 3. Run OBSERVER check.,OBSERVER detects orphan disk file and logs coherence issue. Test: test_check_disk_coherence_orphan_file
+D004,Data Coherence,Observer Start/Stop,Call observer start() and stop() methods.,Observer thread starts and stops correctly. Test: test_observer_start_stop
+D005,Data Coherence,Coherence Check No Issues,Run coherence check with empty DB and no files.,No coherence issues detected. Test: test_check_coherence_no_issues
+E001,Security,SQL Injection (Template),Call POST /templates with SQL injection in name field.,Request is rejected or safely handled without SQL execution. Test: test_template_security_sql_injection
+E002,Security,SQL Injection (VM),Call GET /vms/{id} with SQL injection in ID.,Request is rejected or safely handled without SQL execution. Test: test_vm_security_sql_injection
+E003,Security,SQL Injection (Disk),Call GET /disks/{id} with SQL injection in ID.,Request is rejected or safely handled without SQL execution. Test: test_disk_security_sql_injection
+E004,Security,Path Traversal (Template),Call DELETE /templates/{name} with path traversal in name.,Request is rejected or safely handled. Test: test_template_security_path_traversal
+E005,Security,Path Traversal (VM),Call GET /vms/{id} with path traversal in ID.,Request is rejected or safely handled. Test: test_vm_security_path_traversal
+E006,Security,Path Traversal (Disk),Call GET /disks/{id} with path traversal in ID.,Request is rejected or safely handled. Test: test_disk_security_path_traversal
+E007,Security,Path Traversal (Observer),Observer checks with path traversal in storage path.,Observer safely handles path traversal attempts. Test: test_observer_security_path_traversal
+E008,Security,Path Traversal (Operator),Operator operations with path traversal in paths.,Operator safely handles path traversal attempts. Test: test_operator_security_path_traversal
+E009,Security,Very Large Values (Template),Call POST /templates with very large cpu_count or ram_amount.,Request is rejected or safely handled. Test: test_template_security_very_large_values
+E010,Security,Very Large Values (Disk),Call POST /disks with very large size value.,Request is rejected or safely handled. Test: test_disk_security_very_large_size
+E011,Security,Very Long ID (VM),Call POST /vms with very long VM ID.,Request is rejected or safely handled. Test: test_vm_security_very_long_id
+E012,Security,Special Characters (Template),Call POST /templates with special characters in name.,Request is rejected or safely handled. Test: test_template_security_special_characters
+E013,Security,Special Characters (VM),Call POST /vms with special characters in ID.,Request is rejected or safely handled. Test: test_vm_security_special_characters_in_id
+F001,Safety,Invalid CPU Count,Call POST /templates with cpu_count <= 0.,Request is rejected with validation error (422). Test: test_create_template_invalid_cpu
+F002,Safety,Invalid RAM Amount,Call POST /templates with ram_amount <= 0.,Request is rejected with validation error (422). Test: test_create_template_invalid_ram
+F003,Safety,Missing Fields (Template),Call POST /templates with missing required fields.,Request is rejected with validation error (422). Test: test_create_template_missing_fields
+F004,Safety,Invalid Disk Size,Call POST /disks with size <= 0.,Request is rejected with validation error (422). Test: test_create_disk_invalid_size, test_create_disk_negative_size
+F005,Safety,Invalid State Transition,Call POST /vms/{id}/actions/stop on already stopped VM.,Request is rejected with appropriate error. Test: test_vm_security_invalid_state_transition
+F006,Safety,Invalid Device (Operator),Call attach_disk with invalid device name.,Request is rejected or safely handled. Test: test_operator_safety_invalid_device
+F007,Safety,Invalid Size (Operator),Call create_disk_image with invalid size.,Request is rejected or safely handled. Test: test_operator_safety_invalid_size
+F008,Safety,Rapid Start/Stop (Observer),Rapidly start and stop observer multiple times.,Observer handles rapid state changes correctly. Test: test_observer_safety_rapid_start_stop
+F009,Safety,Double Start (Observer),Call observer start() twice.,Observer handles double start correctly. Test: test_observer_double_start
+F010,Safety,Double Stop (Observer),Call observer stop() twice.,Observer handles double stop correctly. Test: test_observer_double_stop
+G001,Operator Service,Create Disk Image,Call operator.create_disk_image() with valid path and size.,Disk image file is created in filesystem. Test: test_create_disk_image_success
+G002,Operator Service,Delete Disk Image,Call operator.delete_disk_image() with existing disk path.,Disk image file is removed from filesystem. Test: test_delete_disk_image_success
+G003,Operator Service,Start VM (Dry Run),Call operator.start_vm() in dry-run mode.,VM start is logged but not executed. Test: test_start_vm_dry_run
+G004,Operator Service,Stop VM (Dry Run),Call operator.stop_vm() in dry-run mode.,VM stop is logged but not executed. Test: test_stop_vm_dry_run
+G005,Operator Service,Attach Disk (Dry Run),Call operator.attach_disk() in dry-run mode.,Disk attach is logged but not executed. Test: test_attach_disk_dry_run
+G006,Operator Service,Detach Disk (Dry Run),Call operator.detach_disk() in dry-run mode.,Disk detach is logged but not executed. Test: test_detach_disk_dry_run
+G007,Operator Service,Already Running,Call operator.start_vm() on already running VM.,Returns OperatorError indicating VM is already running. Test: test_start_vm_already_running (operator)
+G008,Operator Service,Attach to Non-running VM,Call operator.attach_disk() when VM is not running.,Returns OperatorError indicating VM is not running. Test: test_attach_disk_not_running
+H001,System,Health Check,Call GET /health endpoint.,Returns health status with system checks (DB, storage, QEMU, OBSERVER). Test: test_health_and_openapi
+H002,System,OpenAPI Spec,Call GET /openapi.yaml endpoint.,Returns OpenAPI specification in YAML format. Test: test_health_and_openapi

@@ -51,4 +51,4 @@ Steps for development
 5) Implement test for safety and security verification
 6) Implement unified logs for all services and agents
 7) Implement network management based on a fixed configurable local VLAN
-8) Produce README and architecture documents using UML style
+8) Produce architecture documents using UML style
