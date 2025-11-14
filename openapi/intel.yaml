@@ -1,0 +1,368 @@
+openapi: 3.0.3
+info:
+  title: VMAN - INTEL Service API
+  version: 0.1.0
+  description: |
+    REST API for the INTEL service of VMAN. Manages VM templates, VM lifecycle, and disks.
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+tags:
+  - name: templates
+    description: VM size templates management
+  - name: vms
+    description: VM lifecycle management
+  - name: disks
+    description: Disk lifecycle management
+paths:
+  /templates:
+    post:
+      tags: [templates]
+      summary: Create a VM template
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VMTemplateCreate'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VMTemplate'
+        '400':
+          description: Invalid input
+    get:
+      tags: [templates]
+      summary: List templates
+      operationId: listTemplates
+      parameters: []
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VMTemplate'
+  /templates/{name}:
+    delete:
+      tags: [templates]
+      summary: Delete a VM template by name
+      operationId: deleteTemplate
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Template deleted
+        '404':
+          description: Template not found
+
+  /vms:
+    post:
+      tags: [vms]
+      summary: Create a VM from a template
+      operationId: createVM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VMCreate'
+      responses:
+        '201':
+          description: VM created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VM'
+        '400':
+          description: Invalid input or template not found
+    get:
+      tags: [vms]
+      summary: List VMs
+      operationId: listVMs
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [running, stopped, paused, error]
+          description: Filter by VM state
+      responses:
+        '200':
+          description: List of VMs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VM'
+  /vms/{vm_id}:
+    get:
+      tags: [vms]
+      summary: Get VM details
+      operationId: getVM
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: VM details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VM'
+        '404':
+          description: VM not found
+    delete:
+      tags: [vms]
+      summary: Delete VM
+      operationId: deleteVM
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: VM deleted
+        '404':
+          description: VM not found
+  /vms/{vm_id}/actions/start:
+    post:
+      tags: [vms]
+      summary: Start a VM
+      operationId: startVM
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Start initiated
+        '400':
+          description: Invalid state transition
+  /vms/{vm_id}/actions/stop:
+    post:
+      tags: [vms]
+      summary: Stop a VM
+      operationId: stopVM
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Stop initiated
+        '400':
+          description: Invalid state transition
+  /vms/{vm_id}/actions/restart:
+    post:
+      tags: [vms]
+      summary: Restart a VM
+      operationId: restartVM
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Restart initiated
+        '400':
+          description: Invalid state transition
+
+  /disks:
+    post:
+      tags: [disks]
+      summary: Create a new disk
+      operationId: createDisk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiskCreate'
+      responses:
+        '201':
+          description: Disk created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disk'
+    get:
+      tags: [disks]
+      summary: List disks
+      operationId: listDisks
+      responses:
+        '200':
+          description: List of disks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Disk'
+  /disks/{disk_id}:
+    get:
+      tags: [disks]
+      summary: Get disk details
+      operationId: getDisk
+      parameters:
+        - name: disk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Disk details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disk'
+        '404':
+          description: Disk not found
+    delete:
+      tags: [disks]
+      summary: Delete a disk
+      operationId: deleteDisk
+      parameters:
+        - name: disk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Disk deleted
+  /disks/{disk_id}/attach:
+    post:
+      tags: [disks]
+      summary: Attach disk to a VM
+      operationId: attachDisk
+      parameters:
+        - name: disk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vm_id:
+                  type: string
+              required: [vm_id]
+      responses:
+        '200':
+          description: Disk attached
+        '400':
+          description: Invalid request or already attached
+  /disks/{disk_id}/detach:
+    post:
+      tags: [disks]
+      summary: Detach disk from a VM
+      operationId: detachDisk
+      parameters:
+        - name: disk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Disk detached
+        '400':
+          description: Invalid request or not attached
+
+components:
+  schemas:
+    VMTemplate:
+      type: object
+      properties:
+        name:
+          type: string
+        cpu_count:
+          type: integer
+          minimum: 1
+        ram_amount:
+          type: integer
+          minimum: 1
+      required: [name, cpu_count, ram_amount]
+    VMTemplateCreate:
+      allOf:
+        - $ref: '#/components/schemas/VMTemplate'
+    VM:
+      type: object
+      properties:
+        id:
+          type: string
+        vm_template:
+          $ref: '#/components/schemas/VMTemplate'
+        state:
+          type: string
+          enum: [running, stopped, paused, error]
+        local_ip:
+          type: string
+          format: ipv4
+      required: [id, vm_template, state]
+    VMCreate:
+      type: object
+      properties:
+        template_name:
+          type: string
+        name:
+          type: string
+      required: [template_name]
+    Disk:
+      type: object
+      properties:
+        id:
+          type: string
+        size:
+          type: integer
+          description: Size in GB
+        mount_point:
+          type: string
+        state:
+          type: string
+          enum: [available, attached, error]
+      required: [id, size, state]
+    DiskCreate:
+      type: object
+      properties:
+        size:
+          type: integer
+        mount_point:
+          type: string
+      required: [size]
+
+  responses:
+    NotFound:
+      description: Resource not found
+    InvalidInput:
+      description: Malformed request or invalid parameters
+
+security: []
