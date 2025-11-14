@@ -176,6 +176,10 @@ class LocalOperator(OperatorInterface):
 
     def create_disk_image(self, path: Path, size_gb: int, fmt: str = "qcow2") -> Path:
         path = Path(path)
+        # Validate size (even in dry-run mode)
+        if size_gb <= 0:
+            raise ValueError(f"Invalid disk size: {size_gb}GB (must be > 0)")
+        
         self.ensure_storage_dir(path)
         if path.exists():
             raise OperatorError(f"Disk image already exists: {path}")
@@ -198,9 +202,14 @@ class LocalOperator(OperatorInterface):
 
     def delete_disk_image(self, path: Path) -> None:
         path = Path(path)
+        # Validate file existence (even in dry-run mode for safety)
+        if not path.exists():
+            raise OperatorError(f"Disk image not found: {path}")
+        
         if self.dry_run:
             logger.info("dry-run: would delete disk %s", path)
             return
+        
         try:
             path.unlink()
         except FileNotFoundError:
@@ -436,16 +445,17 @@ class LocalOperator(OperatorInterface):
 
     def attach_disk(self, vm_id: str, disk_path: Path, device: str = "/dev/xvda") -> None:
         """Attach a disk to a running VM using QMP hot-plug."""
+        disk_path = Path(disk_path)
+        # Validate disk exists (even in dry-run mode for safety)
+        if not disk_path.exists():
+            raise OperatorError(f"Disk image not found: {disk_path}")
+        
         if self.dry_run:
             logger.info("dry-run: would attach disk %s to VM %s as %s", disk_path, vm_id, device)
             return
         
         if not self._is_vm_running(vm_id):
             raise OperatorError(f"VM {vm_id} is not running")
-        
-        disk_path = Path(disk_path)
-        if not disk_path.exists():
-            raise OperatorError(f"Disk image not found: {disk_path}")
         
         # Map device name to drive ID (e.g., /dev/xvdb -> drive1)
         # Note: drive0 is typically the root disk

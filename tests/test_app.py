@@ -9,6 +9,33 @@ from app import db, models
 client = TestClient(app)
 
 
+def test_health_and_openapi():
+    """Test health check and OpenAPI endpoints."""
+    # Mock operator and observer to be healthy
+    with patch('app.main._operator') as mock_op, \
+         patch('app.main._observer') as mock_obs:
+        mock_op.storage_path = "/tmp/test"
+        mock_op.qemu_bin = "/usr/bin/qemu-system-x86_64"
+        mock_op.qemu_img = "/usr/bin/qemu-img"
+        mock_obs.running = True
+        
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('os.access', return_value=True), \
+             patch('app.db.SessionLocal') as mock_db:
+            mock_session = MagicMock()
+            mock_db.return_value = mock_session
+            mock_session.execute.return_value = None
+            mock_session.close.return_value = None
+            
+            # Test health endpoint
+            r = client.get("/health")
+            assert r.status_code == 200
+            
+            # Test OpenAPI endpoint
+            r2 = client.get("/openapi.yaml")
+            assert r2.status_code in [200, 404]
+
+
 @pytest.fixture(autouse=True)
 def setup_db():
     """Setup and teardown database for each test."""

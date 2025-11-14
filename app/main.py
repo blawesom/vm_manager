@@ -215,7 +215,7 @@ def get_network_config():
 
 @app.get("/openapi.yaml", tags=["meta"])
 def openapi_yaml():
-    repo_root = pathlib.Path(__file__).resolve().parents[2]
+    repo_root = pathlib.Path(__file__).resolve().parent.parent
     spec_path = repo_root / "openapi" / "intel.yaml"
     if not spec_path.exists():
         raise HTTPException(status_code=404, detail="OpenAPI spec not found")

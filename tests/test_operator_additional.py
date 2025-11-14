@@ -102,23 +102,33 @@ def test_start_vm_creates_root_disk_if_missing(mock_run, temp_storage, test_oper
 
 
 @patch('app.operator.subprocess.run')
-def test_stop_vm_force_kill(mock_run, temp_storage, test_operator):
+@patch.dict('os.environ', {'VMAN_OPERATOR_DRY_RUN': '0'}, clear=False)
+def test_stop_vm_force_kill(mock_run, temp_storage):
     """Test stop_vm with force kill."""
+    # Create operator without dry-run to test actual kill
+    # Need to clear env var that might be set by other tests
+    test_operator = operator.LocalOperator(dry_run=False, storage_path=temp_storage)
+    
     vm_id = "test-vm"
     vm_dir = temp_storage / "vms" / vm_id
     vm_dir.mkdir(parents=True)
     pid_file = vm_dir / "qemu.pid"
     pid_file.write_text("12345")
+    qmp_sock = vm_dir / "qmp.sock"
+    qmp_sock.touch()
     
     # Mock QMP fails, then force kill
+    # When force=True, it skips QMP, sends SIGTERM, waits (VM still running), then SIGKILL
     with patch.object(test_operator, '_qmp_command') as mock_qmp, \
-         patch('os.kill') as mock_kill:
+         patch('os.kill') as mock_kill, \
+         patch('time.sleep'), \
+         patch.object(test_operator, '_is_vm_running', side_effect=[True] + [True] * 10 + [True]):
         mock_qmp.side_effect = operator.OperatorError("QMP failed")
         mock_kill.return_value = None
         
         test_operator.stop_vm(vm_id, force=True)
-        # Should attempt force kill
-        assert mock_kill.called
+        # Should attempt force kill (SIGKILL) - called at least twice (SIGTERM and SIGKILL)
+        assert mock_kill.call_count >= 2
 
 
 def test_get_vm_dir(temp_storage, test_operator):
@@ -187,13 +197,13 @@ def test_qmp_command_success(mock_socket, temp_storage, test_operator):
     qmp_sock = vm_dir / "qmp.sock"
     qmp_sock.touch()
     
-    # Mock socket
+    # Mock socket - QMP reads until newline, so responses need newlines
     mock_sock = MagicMock()
     mock_socket.return_value = mock_sock
     mock_sock.recv.side_effect = [
-        b'{"QMP": {"version": {}}}',
-        b'{"return": {}}',
-        b'{"return": {"result": "success"}}'
+        b'{"QMP": {"version": {}}}\n',  # Greeting with newline
+        b'{"return": {}}\n',  # Capabilities response with newline
+        b'{"return": {"result": "success"}}\n'  # Command response with newline
     ]
     
     result = test_operator._qmp_command(qmp_sock, {"execute": "test"})
@@ -209,13 +219,13 @@ def test_qmp_command_error_response(mock_socket, temp_storage, test_operator):
     qmp_sock = vm_dir / "qmp.sock"
     qmp_sock.touch()
     
-    # Mock socket with error
+    # Mock socket with error - responses need newlines
     mock_sock = MagicMock()
     mock_socket.return_value = mock_sock
     mock_sock.recv.side_effect = [
-        b'{"QMP": {"version": {}}}',
-        b'{"return": {}}',
-        b'{"error": {"class": "GenericError", "desc": "Test error"}}'
+        b'{"QMP": {"version": {}}}\n',  # Greeting with newline
+        b'{"return": {}}\n',  # Capabilities response with newline
+        b'{"error": {"class": "GenericError", "desc": "Test error"}}\n'  # Error response with newline
     ]
     
     with pytest.raises(operator.OperatorError, match="error"):
@@ -231,13 +241,14 @@ def test_qmp_command_timeout(mock_socket, temp_storage, test_operator):
     qmp_sock = vm_dir / "qmp.sock"
     qmp_sock.touch()
     
-    # Mock socket timeout
+    # Mock socket timeout - raise timeout on first recv
     mock_sock = MagicMock()
     mock_socket.return_value = mock_sock
     import socket
-    mock_sock.recv.side_effect = socket.timeout()
+    mock_sock.recv.side_effect = socket.timeout("Connection timed out")
     
-    with pytest.raises(operator.OperatorError, match="timeout"):
+    # The error message is "QMP command timed out" or "timed out"
+    with pytest.raises(operator.OperatorError, match="timed out"):
         test_operator._qmp_command(qmp_sock, {"execute": "test"})
 
 
@@ -250,10 +261,10 @@ def test_qmp_command_invalid_greeting(mock_socket, temp_storage, test_operator):
     qmp_sock = vm_dir / "qmp.sock"
     qmp_sock.touch()
     
-    # Mock socket with invalid greeting
+    # Mock socket with invalid greeting - needs newline for recv loop
     mock_sock = MagicMock()
     mock_socket.return_value = mock_sock
-    mock_sock.recv.return_value = b'{"invalid": "greeting"}'
+    mock_sock.recv.return_value = b'{"invalid": "greeting"}\n'
     
     with pytest.raises(operator.OperatorError, match="Invalid QMP"):
         test_operator._qmp_command(qmp_sock, {"execute": "test"})
@@ -288,11 +299,13 @@ def test_start_vm_with_network_manager(temp_storage):
             pass  # May fail due to QEMU, but network setup should be attempted
 
 
+@patch.dict('os.environ', {'VMAN_OPERATOR_DRY_RUN': '0'}, clear=False)
 def test_stop_vm_cleanup_network_resources(temp_storage):
     """Test stop_vm cleans up network resources."""
     from app import network_manager
     nm = network_manager.NetworkManager(dry_run=True)
-    op = operator.LocalOperator(dry_run=True, storage_path=temp_storage, network_manager=nm)
+    # Create operator without dry-run to test actual cleanup
+    op = operator.LocalOperator(dry_run=False, storage_path=temp_storage, network_manager=nm)
     
     vm_id = "test-vm"
     vm_dir = temp_storage / "vms" / vm_id
@@ -304,10 +317,23 @@ def test_stop_vm_cleanup_network_resources(temp_storage):
     ip_file.write_text("192.168.100.10")
     tap_file.write_text("tap-vm1")
     
+    # Create PID file and QMP socket
+    pid_file = vm_dir / "qemu.pid"
+    pid_file.write_text("12345")
+    qmp_sock = vm_dir / "qmp.sock"
+    qmp_sock.touch()
+    
     with patch.object(nm, 'delete_tap_interface') as mock_delete_tap, \
-         patch.object(nm, 'release_ip') as mock_release_ip:
+         patch.object(nm, 'release_ip') as mock_release_ip, \
+         patch.object(op, '_is_vm_running', side_effect=[True] + [True] * 10 + [True]), \
+         patch('os.kill') as mock_kill, \
+         patch('time.sleep'), \
+         patch.object(op, '_qmp_command', side_effect=operator.OperatorError("QMP failed")):
+        # VM is running, force=True skips QMP, sends SIGTERM, waits 10s (still running), 
+        # then sends SIGKILL, then cleanup
+        mock_kill.return_value = None
         op.stop_vm(vm_id, force=True)
-        # Should cleanup network resources
+        # Should cleanup network resources after force kill
         mock_delete_tap.assert_called_once()
         mock_release_ip.assert_called_once()
 

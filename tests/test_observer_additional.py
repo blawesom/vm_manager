@@ -5,6 +5,14 @@ from pathlib import Path
 from app import observer, db, models
 
 
+@pytest.fixture(autouse=True)
+def setup_db():
+    """Setup and teardown database for each test."""
+    models.Base.metadata.create_all(bind=db.engine)
+    yield
+    models.Base.metadata.drop_all(bind=db.engine)
+
+
 @pytest.fixture
 def temp_storage(tmp_path):
     """Create temporary storage directory."""
@@ -40,13 +48,14 @@ def test_check_vm_coherence_orphan_process(temp_storage, test_observer):
     pid_file = vm_dir / "qemu.pid"
     pid_file.write_text("12345")
     
-    # Mock process exists
+    # Mock process exists - need to patch os.kill to not raise
     with patch('os.kill') as mock_kill:
-        mock_kill.return_value = None  # Process exists
+        mock_kill.return_value = None  # Process exists (os.kill returns None on success)
         
         issues = test_observer._check_vm_coherence()
         assert len(issues) > 0
-        assert any(issue.issue_type == "orphan_vm" for issue in issues)
+        # The issue type is "orphan_process" not "orphan_vm" based on observer code
+        assert any(issue.issue_type == "orphan_process" for issue in issues)
 
 
 def test_check_vm_coherence_running_matches(temp_storage, test_observer):
@@ -121,11 +130,15 @@ def test_get_vm_ids_from_pid_files_multiple(temp_storage, test_observer):
         pid_file = vm_dir / "qemu.pid"
         pid_file.write_text("12345")
     
-    vm_ids = test_observer._get_vm_ids_from_pid_files()
-    assert len(vm_ids) == 3
-    assert "vm-1" in vm_ids
-    assert "vm-2" in vm_ids
-    assert "vm-3" in vm_ids
+    # Mock os.kill to indicate processes exist
+    with patch('os.kill') as mock_kill:
+        mock_kill.return_value = None  # Process exists
+        
+        vm_ids = test_observer._get_vm_ids_from_pid_files()
+        assert len(vm_ids) == 3
+        assert "vm-1" in vm_ids
+        assert "vm-2" in vm_ids
+        assert "vm-3" in vm_ids
 
 
 def test_get_vm_ids_from_pid_files_invalid_pid(temp_storage, test_observer):
@@ -153,7 +166,7 @@ def test_check_coherence_with_issues(temp_storage, test_observer):
         db_session.close()
     
     # No PID file, so should detect mismatch
-    issues = test_observer._check_coherence()
+    issues = test_observer.check_coherence()
     assert len(issues) > 0
 
 

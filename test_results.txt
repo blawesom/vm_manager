@@ -1,0 +1,521 @@
+[1m============================= test session starts ==============================[0m
+platform linux -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0 -- /home/benj/Documents/git/vm_manager/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/benj/Documents/git/vm_manager
+configfile: pytest.ini
+plugins: anyio-4.11.0, cov-7.0.0
+[1mcollecting ... [0mcollected 83 items
+
+tests/test_app.py::test_health_and_openapi [31mFAILED[0m[31m                        [  1%][0m
+tests/test_disks.py::test_create_disk_success [31mFAILED[0m[31m                     [  2%][0m
+tests/test_disks.py::test_create_disk_with_mount_point [31mFAILED[0m[31m            [  3%][0m
+tests/test_disks.py::test_create_disk_invalid_size [32mPASSED[0m[31m                [  4%][0m
+tests/test_disks.py::test_create_disk_negative_size [32mPASSED[0m[31m               [  6%][0m
+tests/test_disks.py::test_list_disks_empty [32mPASSED[0m[31m                        [  7%][0m
+tests/test_disks.py::test_list_disks_multiple [31mFAILED[0m[31m                     [  8%][0m
+tests/test_disks.py::test_get_disk_success [31mFAILED[0m[31m                        [  9%][0m
+tests/test_disks.py::test_get_disk_not_found [32mPASSED[0m[31m                      [ 10%][0m
+tests/test_disks.py::test_delete_disk_success [31mFAILED[0m[31m                     [ 12%][0m
+tests/test_disks.py::test_delete_disk_not_found [32mPASSED[0m[31m                   [ 13%][0m
+tests/test_disks.py::test_delete_attached_disk [31mFAILED[0m[31m                    [ 14%][0m
+tests/test_disks.py::test_attach_disk_missing_vm_id [31mFAILED[0m[31m               [ 15%][0m
+tests/test_disks.py::test_attach_disk_vm_not_found [31mFAILED[0m[31m                [ 16%][0m
+tests/test_disks.py::test_attach_disk_already_attached [31mFAILED[0m[31m            [ 18%][0m
+tests/test_disks.py::test_detach_disk_not_attached [31mFAILED[0m[31m                [ 19%][0m
+tests/test_disks.py::test_disk_security_sql_injection [32mPASSED[0m[31m             [ 20%][0m
+tests/test_disks.py::test_disk_security_path_traversal [32mPASSED[0m[31m            [ 21%][0m
+tests/test_disks.py::test_disk_security_very_large_size [32mPASSED[0m[31m           [ 22%][0m
+tests/test_disks.py::test_disk_security_invalid_mount_point [32mPASSED[0m[31m       [ 24%][0m
+tests/test_observer.py::test_observer_start_stop [32mPASSED[0m[31m                  [ 25%][0m
+tests/test_observer.py::test_observer_double_start [32mPASSED[0m[31m                [ 26%][0m
+tests/test_observer.py::test_observer_double_stop [32mPASSED[0m[31m                 [ 27%][0m
+tests/test_observer.py::test_check_coherence_no_issues [32mPASSED[0m[31m            [ 28%][0m
+tests/test_observer.py::test_check_vm_coherence_state_mismatch [32mPASSED[0m[31m    [ 30%][0m
+tests/test_observer.py::test_check_disk_coherence_missing_file [32mPASSED[0m[31m    [ 31%][0m
+tests/test_observer.py::test_check_disk_coherence_orphan_file [32mPASSED[0m[31m     [ 32%][0m
+tests/test_observer.py::test_check_disk_coherence_state_inconsistent [32mPASSED[0m[31m [ 33%][0m
+tests/test_observer.py::test_get_vm_ids_from_pid_files [32mPASSED[0m[31m            [ 34%][0m
+tests/test_observer.py::test_observer_no_db_session_factory [32mPASSED[0m[31m       [ 36%][0m
+tests/test_observer.py::test_observer_security_path_traversal [32mPASSED[0m[31m     [ 37%][0m
+tests/test_observer.py::test_observer_safety_rapid_start_stop [32mPASSED[0m[31m     [ 38%][0m
+tests/test_operator.py::test_create_disk_image_success [32mPASSED[0m[31m            [ 39%][0m
+tests/test_operator.py::test_create_disk_image_already_exists [31mFAILED[0m[31m     [ 40%][0m
+tests/test_operator.py::test_delete_disk_image_success [32mPASSED[0m[31m            [ 42%][0m
+tests/test_operator.py::test_delete_disk_image_not_found [31mFAILED[0m[31m          [ 43%][0m
+tests/test_operator.py::test_ensure_storage_dir_success [32mPASSED[0m[31m           [ 44%][0m
+tests/test_operator.py::test_ensure_storage_dir_permissions [32mPASSED[0m[31m       [ 45%][0m
+tests/test_operator.py::test_start_vm_dry_run [32mPASSED[0m[31m                     [ 46%][0m
+tests/test_operator.py::test_start_vm_already_running [32mPASSED[0m[31m             [ 48%][0m
+tests/test_operator.py::test_stop_vm_dry_run [32mPASSED[0m[31m                      [ 49%][0m
+tests/test_operator.py::test_attach_disk_dry_run [32mPASSED[0m[31m                  [ 50%][0m
+tests/test_operator.py::test_attach_disk_not_running [32mPASSED[0m[31m              [ 51%][0m
+tests/test_operator.py::test_attach_disk_not_found [31mFAILED[0m[31m                [ 53%][0m
+tests/test_operator.py::test_detach_disk_dry_run [32mPASSED[0m[31m                  [ 54%][0m
+tests/test_operator.py::test_operator_security_path_traversal [32mPASSED[0m[31m     [ 55%][0m
+tests/test_operator.py::test_operator_security_very_long_path [32mPASSED[0m[31m     [ 56%][0m
+tests/test_operator.py::test_operator_safety_invalid_size [31mFAILED[0m[31m         [ 57%][0m
+tests/test_operator.py::test_operator_safety_invalid_device [32mPASSED[0m[31m       [ 59%][0m
+tests/test_templates.py::test_create_template_success [32mPASSED[0m[31m             [ 60%][0m
+tests/test_templates.py::test_create_template_duplicate [32mPASSED[0m[31m           [ 61%][0m
+tests/test_templates.py::test_create_template_invalid_cpu [32mPASSED[0m[31m         [ 62%][0m
+tests/test_templates.py::test_create_template_invalid_ram [32mPASSED[0m[31m         [ 63%][0m
+tests/test_templates.py::test_create_template_missing_fields [32mPASSED[0m[31m      [ 65%][0m
+tests/test_templates.py::test_list_templates_empty [32mPASSED[0m[31m                [ 66%][0m
+tests/test_templates.py::test_list_templates_multiple [32mPASSED[0m[31m             [ 67%][0m
+tests/test_templates.py::test_delete_template_success [32mPASSED[0m[31m             [ 68%][0m
+tests/test_templates.py::test_delete_template_not_found [32mPASSED[0m[31m           [ 69%][0m
+tests/test_templates.py::test_delete_template_in_use [31mFAILED[0m[31m              [ 71%][0m
+tests/test_templates.py::test_template_security_sql_injection [32mPASSED[0m[31m     [ 72%][0m
+tests/test_templates.py::test_template_security_path_traversal [32mPASSED[0m[31m    [ 73%][0m
+tests/test_templates.py::test_template_security_very_large_values [32mPASSED[0m[31m [ 74%][0m
+tests/test_templates.py::test_template_security_empty_name [32mPASSED[0m[31m        [ 75%][0m
+tests/test_templates.py::test_template_security_special_characters [32mPASSED[0m[31m [ 77%][0m
+tests/test_vms.py::test_create_vm_success [31mFAILED[0m[31m                         [ 78%][0m
+tests/test_vms.py::test_create_vm_with_name [32mPASSED[0m[31m                       [ 79%][0m
+tests/test_vms.py::test_create_vm_template_not_found [31mFAILED[0m[31m              [ 80%][0m
+tests/test_vms.py::test_create_vm_duplicate_id [32mPASSED[0m[31m                    [ 81%][0m
+tests/test_vms.py::test_list_vms_empty [32mPASSED[0m[31m                            [ 83%][0m
+tests/test_vms.py::test_list_vms_filter_by_state [31mFAILED[0m[31m                  [ 84%][0m
+tests/test_vms.py::test_get_vm_success [31mFAILED[0m[31m                            [ 85%][0m
+tests/test_vms.py::test_get_vm_not_found [32mPASSED[0m[31m                          [ 86%][0m
+tests/test_vms.py::test_delete_vm_success [31mFAILED[0m[31m                         [ 87%][0m
+tests/test_vms.py::test_delete_vm_not_found [32mPASSED[0m[31m                       [ 89%][0m
+tests/test_vms.py::test_start_vm_success [31mFAILED[0m[31m                          [ 90%][0m
+tests/test_vms.py::test_start_vm_already_running [31mFAILED[0m[31m                  [ 91%][0m
+tests/test_vms.py::test_stop_vm_not_running [31mFAILED[0m[31m                       [ 92%][0m
+tests/test_vms.py::test_restart_vm_success [31mFAILED[0m[31m                        [ 93%][0m
+tests/test_vms.py::test_vm_security_sql_injection [32mPASSED[0m[31m                 [ 95%][0m
+tests/test_vms.py::test_vm_security_path_traversal [32mPASSED[0m[31m                [ 96%][0m
+tests/test_vms.py::test_vm_security_invalid_state_transition [31mFAILED[0m[31m      [ 97%][0m
+tests/test_vms.py::test_vm_security_very_long_id [32mPASSED[0m[31m                  [ 98%][0m
+tests/test_vms.py::test_vm_security_special_characters_in_id [31mFAILED[0m[31m      [100%][0m
+
+=================================== FAILURES ===================================
+[31m[1m___________________________ test_health_and_openapi ____________________________[0m
+[1m[31mtests/test_app.py[0m:9: in test_health_and_openapi
+    [0m[94massert[39;49;00m r.status_code == [94m200[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 503 == 200[0m
+[1m[31mE    +  where 503 = <Response [503 Service Unavailable]>.status_code[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP GET /health -> 503 (2.93ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: GET http://testserver/health "HTTP/1.1 503 Service Unavailable"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP GET /health -> 503 (2.93ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/health "HTTP/1.1 503 Service Unavailable"
+[31m[1m___________________________ test_create_disk_success ___________________________[0m
+[1m[31mtests/test_disks.py[0m:24: in test_create_disk_success
+    [0m[94massert[39;49;00m response.status_code == [94m201[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 422 == 201[0m
+[1m[31mE    +  where 422 = <Response [422 Unprocessable Entity]>.status_code[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (1.11ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (1.11ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m______________________ test_create_disk_with_mount_point _______________________[0m
+[1m[31mtests/test_disks.py[0m:34: in test_create_disk_with_mount_point
+    [0m[94massert[39;49;00m response.status_code == [94m201[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 400 == 201[0m
+[1m[31mE    +  where 400 = <Response [400 Bad Request]>.status_code[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP POST /disks -> 400 (4.24ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 400 Bad Request"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 400 (4.24ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 400 Bad Request"
+[31m[1m___________________________ test_list_disks_multiple ___________________________[0m
+[1m[31mtests/test_disks.py[0m:65: in test_list_disks_multiple
+    [0m[94massert[39;49;00m [96mlen[39;49;00m(data) == [94m2[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 0 == 2[0m
+[1m[31mE    +  where 0 = len([])[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (1.33ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (0.83ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP GET /disks -> 200 (1.12ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: GET http://testserver/disks "HTTP/1.1 200 OK"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (1.33ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (0.83ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP GET /disks -> 200 (1.12ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/disks "HTTP/1.1 200 OK"
+[31m[1m____________________________ test_get_disk_success _____________________________[0m
+[1m[31mtests/test_disks.py[0m:71: in test_get_disk_success
+    [0mdisk_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (0.72ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (0.72ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m___________________________ test_delete_disk_success ___________________________[0m
+[1m[31mtests/test_disks.py[0m:87: in test_delete_disk_success
+    [0mdisk_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:51 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (0.74ms)
+2025-11-14 18:40:51 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (0.74ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m__________________________ test_delete_attached_disk ___________________________[0m
+[1m[31mtests/test_disks.py[0m:103: in test_delete_attached_disk
+    [0mdisk_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:52 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (1.11ms)
+2025-11-14 18:40:52 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (1.11ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m________________________ test_attach_disk_missing_vm_id ________________________[0m
+[1m[31mtests/test_disks.py[0m:122: in test_attach_disk_missing_vm_id
+    [0mdisk_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:52 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (1.06ms)
+2025-11-14 18:40:52 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (1.06ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m________________________ test_attach_disk_vm_not_found _________________________[0m
+[1m[31mtests/test_disks.py[0m:132: in test_attach_disk_vm_not_found
+    [0mdisk_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:52 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (0.91ms)
+2025-11-14 18:40:52 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (0.91ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m______________________ test_attach_disk_already_attached _______________________[0m
+[1m[31mtests/test_disks.py[0m:141: in test_attach_disk_already_attached
+    [0mdisk_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:52 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (1.26ms)
+2025-11-14 18:40:52 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (1.26ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m________________________ test_detach_disk_not_attached _________________________[0m
+[1m[31mtests/test_disks.py[0m:161: in test_detach_disk_not_attached
+    [0mdisk_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:52 | INFO     | INTEL.main           | HTTP POST /disks -> 422 (0.97ms)
+2025-11-14 18:40:52 | INFO     | httpx                | HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /disks -> 422 (0.97ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/disks "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m____________________ test_create_disk_image_already_exists _____________________[0m
+[1m[31mtests/test_operator.py[0m:35: in test_create_disk_image_already_exists
+    [0m[94mwith[39;49;00m pytest.raises(operator.OperatorError, match=[33m"[39;49;00m[33malready exists[39;49;00m[33m"[39;49;00m):[90m[39;49;00m
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   Failed: DID NOT RAISE <class 'app.operator.OperatorError'>[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:54 | INFO     | OPERATOR.operator    | dry-run: would create disk /tmp/tmpf81q3p4d/test.qcow2 size=10G fmt=qcow2
+2025-11-14 18:40:54 | INFO     | OPERATOR.operator    | dry-run: would create disk /tmp/tmpf81q3p4d/test.qcow2 size=10G fmt=qcow2
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m OPERATOR.operator:operator.py:184 dry-run: would create disk /tmp/tmpf81q3p4d/test.qcow2 size=10G fmt=qcow2
+[32mINFO    [0m OPERATOR.operator:operator.py:184 dry-run: would create disk /tmp/tmpf81q3p4d/test.qcow2 size=10G fmt=qcow2
+[31m[1m_______________________ test_delete_disk_image_not_found _______________________[0m
+[1m[31mtests/test_operator.py[0m:50: in test_delete_disk_image_not_found
+    [0m[94mwith[39;49;00m pytest.raises(operator.OperatorError, match=[33m"[39;49;00m[33mnot found[39;49;00m[33m"[39;49;00m):[90m[39;49;00m
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   Failed: DID NOT RAISE <class 'app.operator.OperatorError'>[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:54 | INFO     | OPERATOR.operator    | dry-run: would delete disk /tmp/tmpwgo1mgky/nonexistent.qcow2
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m OPERATOR.operator:operator.py:202 dry-run: would delete disk /tmp/tmpwgo1mgky/nonexistent.qcow2
+[31m[1m__________________________ test_attach_disk_not_found __________________________[0m
+[1m[31mtests/test_operator.py[0m:123: in test_attach_disk_not_found
+    [0m[94mwith[39;49;00m pytest.raises(operator.OperatorError, match=[33m"[39;49;00m[33mnot found[39;49;00m[33m"[39;49;00m):[90m[39;49;00m
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   Failed: DID NOT RAISE <class 'app.operator.OperatorError'>[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:54 | INFO     | OPERATOR.operator    | dry-run: would attach disk /nonexistent/disk.qcow2 to VM test-vm as /dev/xvda
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m OPERATOR.operator:operator.py:440 dry-run: would attach disk /nonexistent/disk.qcow2 to VM test-vm as /dev/xvda
+[31m[1m______________________ test_operator_safety_invalid_size _______________________[0m
+[1m[31mtests/test_operator.py[0m:163: in test_operator_safety_invalid_size
+    [0m[94mwith[39;49;00m pytest.raises((operator.OperatorError, [96mValueError[39;49;00m)):[90m[39;49;00m
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   Failed: DID NOT RAISE any of (<class 'app.operator.OperatorError'>, <class 'ValueError'>)[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:54 | INFO     | OPERATOR.operator    | dry-run: would create disk /tmp/tmpam_yi673/test.qcow2 size=0G fmt=qcow2
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m OPERATOR.operator:operator.py:184 dry-run: would create disk /tmp/tmpam_yi673/test.qcow2 size=0G fmt=qcow2
+[31m[1m_________________________ test_delete_template_in_use __________________________[0m
+[1m[31mtests/test_templates.py[0m:110: in test_delete_template_in_use
+    [0m[94massert[39;49;00m response.status_code == [94m400[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 204 == 400[0m
+[1m[31mE    +  where 204 = <Response [204 No Content]>.status_code[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (7.50ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (1.03ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP DELETE /templates/used -> 204 (7.06ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: DELETE http://testserver/templates/used "HTTP/1.1 204 No Content"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (7.50ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (1.03ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP DELETE /templates/used -> 204 (7.06ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE http://testserver/templates/used "HTTP/1.1 204 No Content"
+[31m[1m____________________________ test_create_vm_success ____________________________[0m
+[1m[31mtests/test_vms.py[0m:31: in test_create_vm_success
+    [0m[94massert[39;49;00m response.status_code == [94m201[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 422 == 201[0m
+[1m[31mE    +  where 422 = <Response [422 Unprocessable Entity]>.status_code[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (7.18ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (7.18ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (1.04ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (1.04ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m______________________ test_create_vm_template_not_found _______________________[0m
+[1m[31mtests/test_vms.py[0m:48: in test_create_vm_template_not_found
+    [0m[94massert[39;49;00m response.status_code == [94m400[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 422 == 400[0m
+[1m[31mE    +  where 422 = <Response [422 Unprocessable Entity]>.status_code[0m
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (1.06ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (1.06ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m________________________ test_list_vms_filter_by_state _________________________[0m
+[1m[31mtests/test_vms.py[0m:73: in test_list_vms_filter_by_state
+    [0m[94massert[39;49;00m [96mlen[39;49;00m(data) >= [94m1[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 0 >= 1[0m
+[1m[31mE    +  where 0 = len([])[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (6.90ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (6.90ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (0.96ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP GET /vms -> 200 (1.58ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: GET http://testserver/vms?state=stopped "HTTP/1.1 200 OK"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (0.96ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP GET /vms -> 200 (1.58ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/vms?state=stopped "HTTP/1.1 200 OK"
+[31m[1m_____________________________ test_get_vm_success ______________________________[0m
+[1m[31mtests/test_vms.py[0m:80: in test_get_vm_success
+    [0mvm_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (10.94ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (10.94ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (0.92ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (0.92ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m____________________________ test_delete_vm_success ____________________________[0m
+[1m[31mtests/test_vms.py[0m:96: in test_delete_vm_success
+    [0mvm_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (7.32ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (7.32ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (0.97ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (0.97ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m____________________________ test_start_vm_success _____________________________[0m
+[1m[31mtests/test_vms.py[0m:111: in test_start_vm_success
+    [0mvm_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (7.24ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (7.24ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:55 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (1.27ms)
+2025-11-14 18:40:55 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (1.27ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m________________________ test_start_vm_already_running _________________________[0m
+[1m[31mtests/test_vms.py[0m:121: in test_start_vm_already_running
+    [0mvm_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (6.75ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (6.75ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (0.99ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (0.99ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m___________________________ test_stop_vm_not_running ___________________________[0m
+[1m[31mtests/test_vms.py[0m:140: in test_stop_vm_not_running
+    [0mvm_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (7.04ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (7.04ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (0.93ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (0.93ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m___________________________ test_restart_vm_success ____________________________[0m
+[1m[31mtests/test_vms.py[0m:150: in test_restart_vm_success
+    [0mvm_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (7.07ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (7.07ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (1.03ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (1.03ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m__________________ test_vm_security_invalid_state_transition ___________________[0m
+[1m[31mtests/test_vms.py[0m:174: in test_vm_security_invalid_state_transition
+    [0mvm_id = create_response.json()[[33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   KeyError: 'id'[0m
+---------------------------- Captured stdout setup -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /templates -> 201 (7.32ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+------------------------------ Captured log setup ------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /templates -> 201 (7.32ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/templates "HTTP/1.1 201 Created"
+----------------------------- Captured stdout call -----------------------------
+2025-11-14 18:40:56 | INFO     | INTEL.main           | HTTP POST /vms -> 422 (0.96ms)
+2025-11-14 18:40:56 | INFO     | httpx                | HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call -------------------------------
+[32mINFO    [0m INTEL.main:logging_config.py:171 HTTP POST /vms -> 422 (0.96ms)
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/vms "HTTP/1.1 422 Unprocessable Entity"
+[31m[1m__________________ test_vm_security_special_characters_in_id ___________________[0m
+[1m[31mtests/test_vms.py[0m:191: in test_vm_security_special_characters_in_id
+    [0mresponse = client.get([33m"[39;49;00m[33m/vms/test[39;49;00m[33m\n[39;49;00m[33m\r[39;49;00m[33m\t[39;49;00m[33m<script>[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31m.venv/lib/python3.13/site-packages/starlette/testclient.py[0m:479: in get
+    [0m[94mreturn[39;49;00m [96msuper[39;49;00m().get([90m[39;49;00m
+[1m[31m.venv/lib/python3.13/site-packages/httpx/_client.py[0m:1053: in get
+    [0m[94mreturn[39;49;00m [96mself[39;49;00m.request([90m[39;49;00m
+[1m[31m.venv/lib/python3.13/site-packages/starlette/testclient.py[0m:450: in request
+    [0murl = [96mself[39;49;00m._merge_url(url)[90m[39;49;00m
+          ^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31m.venv/lib/python3.13/site-packages/httpx/_client.py[0m:396: in _merge_url
+    [0mmerge_url = URL(url)[90m[39;49;00m
+                ^^^^^^^^[90m[39;49;00m
+[1m[31m.venv/lib/python3.13/site-packages/httpx/_urls.py[0m:117: in __init__
+    [0m[96mself[39;49;00m._uri_reference = urlparse(url, **kwargs)[90m[39;49;00m
+                          ^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31m.venv/lib/python3.13/site-packages/httpx/_urlparse.py[0m:229: in urlparse
+    [0m[94mraise[39;49;00m InvalidURL(error)[90m[39;49;00m
+[1m[31mE   httpx.InvalidURL: Invalid non-printable ASCII character in URL, '\n' at position 9.[0m
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.7-final-0 ________________
+
+Name                     Stmts   Miss  Cover   Missing
+------------------------------------------------------
+app/__init__.py              2      0   100%
+app/db.py                    6      0   100%
+app/logging_config.py       74     10    86%   69, 71, 119-120, 144, 146, 148, 184-185, 198
+app/main.py                346    180    48%   81-90, 97-99, 126-128, 134, 138-140, 144, 151, 158, 165, 179-182, 201-205, 218-222, 252, 264, 307-308, 327-328, 347-362, 367-403, 408-424, 429-468, 479, 491-501, 515, 524-538, 543-577, 582-614
+app/models.py               20      0   100%
+app/network_manager.py     106     68    36%   77-89, 93-97, 101-117, 124-128, 143-150, 158-160, 171-195, 203-221, 229, 243
+app/observer.py            171     40    77%   106-108, 130-132, 141-142, 149-150, 189-191, 211-212, 236, 259, 261-288, 297-299, 304-305
+app/operator.py            303    223    26%   101, 105, 109, 113-124, 128-175, 181, 187-197, 204-209, 228-367, 375-435, 443-488, 496-532
+app/schemas.py              32      0   100%
+------------------------------------------------------
+TOTAL                     1060    521    51%
+Coverage HTML written to dir htmlcov
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_app.py::[1mtest_health_and_openapi[0m - assert 503 == 200
+ +  where 503 = <Response [503 Service Unavailable]>.status_code
+[31mFAILED[0m tests/test_disks.py::[1mtest_create_disk_success[0m - assert 422 == 201
+ +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+[31mFAILED[0m tests/test_disks.py::[1mtest_create_disk_with_mount_point[0m - assert 400 == 201
+ +  where 400 = <Response [400 Bad Request]>.status_code
+[31mFAILED[0m tests/test_disks.py::[1mtest_list_disks_multiple[0m - assert 0 == 2
+ +  where 0 = len([])
+[31mFAILED[0m tests/test_disks.py::[1mtest_get_disk_success[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_disks.py::[1mtest_delete_disk_success[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_disks.py::[1mtest_delete_attached_disk[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_disks.py::[1mtest_attach_disk_missing_vm_id[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_disks.py::[1mtest_attach_disk_vm_not_found[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_disks.py::[1mtest_attach_disk_already_attached[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_disks.py::[1mtest_detach_disk_not_attached[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_operator.py::[1mtest_create_disk_image_already_exists[0m - Failed: DID NOT RAISE <class 'app.operator.OperatorError'>
+[31mFAILED[0m tests/test_operator.py::[1mtest_delete_disk_image_not_found[0m - Failed: DID NOT RAISE <class 'app.operator.OperatorError'>
+[31mFAILED[0m tests/test_operator.py::[1mtest_attach_disk_not_found[0m - Failed: DID NOT RAISE <class 'app.operator.OperatorError'>
+[31mFAILED[0m tests/test_operator.py::[1mtest_operator_safety_invalid_size[0m - Failed: DID NOT RAISE any of (<class 'app.operator.OperatorError'>, <class 'ValueError'>)
+[31mFAILED[0m tests/test_templates.py::[1mtest_delete_template_in_use[0m - assert 204 == 400
+ +  where 204 = <Response [204 No Content]>.status_code
+[31mFAILED[0m tests/test_vms.py::[1mtest_create_vm_success[0m - assert 422 == 201
+ +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+[31mFAILED[0m tests/test_vms.py::[1mtest_create_vm_template_not_found[0m - assert 422 == 400
+ +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+[31mFAILED[0m tests/test_vms.py::[1mtest_list_vms_filter_by_state[0m - assert 0 >= 1
+ +  where 0 = len([])
+[31mFAILED[0m tests/test_vms.py::[1mtest_get_vm_success[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_vms.py::[1mtest_delete_vm_success[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_vms.py::[1mtest_start_vm_success[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_vms.py::[1mtest_start_vm_already_running[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_vms.py::[1mtest_stop_vm_not_running[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_vms.py::[1mtest_restart_vm_success[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_vms.py::[1mtest_vm_security_invalid_state_transition[0m - KeyError: 'id'
+[31mFAILED[0m tests/test_vms.py::[1mtest_vm_security_special_characters_in_id[0m - httpx.InvalidURL: Invalid non-printable ASCII character in URL, '\n' at position 9.
+[31m=================== [31m[1m27 failed[0m, [32m56 passed[0m, [33m1 warning[0m[31m in 5.55s[0m[31m ===================[0m

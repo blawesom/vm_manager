@@ -31,6 +31,10 @@ def test_create_disk_image_already_exists(test_operator, temp_storage):
     disk_path = temp_storage / "test.qcow2"
     test_operator.create_disk_image(disk_path, size_gb=10)
     
+    # In dry-run mode, file won't exist, so create it manually for the test
+    if test_operator.dry_run:
+        disk_path.touch()
+    
     # Try to create again
     with pytest.raises(operator.OperatorError, match="already exists"):
         test_operator.create_disk_image(disk_path, size_gb=10)
@@ -40,6 +44,11 @@ def test_delete_disk_image_success(test_operator, temp_storage):
     """Test successful disk image deletion."""
     disk_path = temp_storage / "test.qcow2"
     test_operator.create_disk_image(disk_path, size_gb=10)
+    
+    # In dry-run mode, file won't exist, so create it manually for the test
+    if test_operator.dry_run:
+        disk_path.touch()
+    
     test_operator.delete_disk_image(disk_path)
     # In dry-run, file won't exist, but should not raise error
 
