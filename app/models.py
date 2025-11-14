@@ -20,3 +20,4 @@ class Disk(Base):
     size = Column(Integer, nullable=False)
     mount_point = Column(String, nullable=True)
     state = Column(String, nullable=False)
+    vm_id = Column(String, ForeignKey("vms.id"), nullable=True)
