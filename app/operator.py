@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import subprocess
 import shutil
-import logging
 import os
 import signal
 import socket
@@ -20,7 +19,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+from . import logging_config
+
+logger = logging_config.UnifiedLogger.get_logger(__name__, logging_config.UnifiedLogger.SERVICE_OPERATOR)
 
 
 class OperatorError(RuntimeError):

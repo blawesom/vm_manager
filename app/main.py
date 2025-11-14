@@ -1,16 +1,18 @@
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from . import db, models, schemas, operator, observer
+from . import db, models, schemas, operator, observer, logging_config
 from sqlalchemy.orm import Session
 from fastapi import status
 import pathlib
 import uuid
-import logging
+import time
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Configure unified logging
+logging_config.UnifiedLogger.configure()
+logger = logging_config.UnifiedLogger.get_logger(__name__, logging_config.UnifiedLogger.SERVICE_INTEL)
 
 app = FastAPI(title="VMAN INTEL", version="0.1.0")
 
@@ -21,6 +23,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Middleware to log all HTTP requests."""
+    start_time = time.time()
+    method = request.method
+    path = request.url.path
+    
+    response = await call_next(request)
+    
+    duration_ms = (time.time() - start_time) * 1000
+    logging_config.UnifiedLogger.log_request(
+        logger, method, path, response.status_code, duration_ms
+    )
+    
+    return response
 
 # Initialize operator and observer
 _operator = operator.LocalOperator()

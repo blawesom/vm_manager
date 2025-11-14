@@ -10,7 +10,6 @@ that uses simple subprocess calls to check QEMU process state and filesystem.
 """
 from __future__ import annotations
 
-import logging
 import subprocess
 import threading
 import time
@@ -20,7 +19,9 @@ from pathlib import Path
 from typing import List, Optional, Callable
 from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
+from . import logging_config
+
+logger = logging_config.UnifiedLogger.get_logger(__name__, logging_config.UnifiedLogger.SERVICE_OBSERVER)
 
 
 @dataclass
@@ -295,11 +296,8 @@ class LocalObserver(ObserverInterface):
                 if issues:
                     logger.warning("Coherence check found %d issue(s)", len(issues))
                     for issue in issues:
-                        logger.warning(
-                            "  - [%s] %s: %s",
-                            issue.issue_type,
-                            issue.resource_id,
-                            issue.details,
+                        logging_config.UnifiedLogger.log_coherence_issue(
+                            logger, issue.issue_type, issue.resource_id, issue.details
                         )
                 else:
                     logger.debug("Coherence check passed")
