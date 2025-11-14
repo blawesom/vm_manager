@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Query, Request
+from fastapi import FastAPI, HTTPException, Depends, Query, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from . import db, models, schemas, operator, observer, logging_config
@@ -7,6 +7,8 @@ from fastapi import status
 import pathlib
 import uuid
 import time
+import json
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -81,7 +83,75 @@ def shutdown_event():
 
 @app.get("/health", tags=["health"])
 def health():
-    return {"status": "ok"}
+    """Enhanced health check endpoint.
+    
+    Checks:
+    - Service status
+    - Database connectivity
+    - Storage directory accessibility
+    - QEMU binary availability
+    - OBSERVER service status
+    """
+    health_status = {
+        "status": "ok",
+        "service": "VMAN INTEL",
+        "checks": {}
+    }
+    
+    # Check database connectivity
+    try:
+        from sqlalchemy import text
+        db_session = db.SessionLocal()
+        db_session.execute(text("SELECT 1"))
+        db_session.close()
+        health_status["checks"]["database"] = "ok"
+    except Exception as e:
+        health_status["checks"]["database"] = f"error: {str(e)}"
+        health_status["status"] = "degraded"
+    
+    # Check storage directory
+    try:
+        storage_path = Path(_operator.storage_path)
+        if storage_path.exists() and os.access(storage_path, os.W_OK):
+            health_status["checks"]["storage"] = "ok"
+        else:
+            health_status["checks"]["storage"] = "error: not accessible"
+            health_status["status"] = "degraded"
+    except Exception as e:
+        health_status["checks"]["storage"] = f"error: {str(e)}"
+        health_status["status"] = "degraded"
+    
+    # Check QEMU binary availability
+    if _operator.qemu_bin:
+        health_status["checks"]["qemu"] = "available"
+    else:
+        health_status["checks"]["qemu"] = "not found"
+        health_status["status"] = "degraded"
+    
+    # Check qemu-img availability
+    if _operator.qemu_img:
+        health_status["checks"]["qemu-img"] = "available"
+    else:
+        health_status["checks"]["qemu-img"] = "not found"
+        health_status["status"] = "degraded"
+    
+    # Check OBSERVER status
+    if _observer:
+        health_status["checks"]["observer"] = "running" if _observer.running else "stopped"
+    else:
+        health_status["checks"]["observer"] = "not initialized"
+        health_status["status"] = "degraded"
+    
+    # Return appropriate status code based on health
+    if health_status["status"] == "ok":
+        return health_status
+    else:
+        # Return 503 Service Unavailable if degraded
+        return Response(
+            content=json.dumps(health_status),
+            status_code=503,
+            media_type="application/json"
+        )
 
 
 @app.get("/observer/status", tags=["observer"])
