@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from . import db, models, schemas, operator
+from . import db, models, schemas, operator, observer
 from sqlalchemy.orm import Session
 from fastapi import status
 import pathlib
@@ -22,8 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize operator
+# Initialize operator and observer
 _operator = operator.LocalOperator()
+_observer: Optional[observer.LocalObserver] = None
 
 
 def get_db():
@@ -36,13 +37,54 @@ def get_db():
 
 @app.on_event("startup")
 def startup_event():
+    global _observer
     # create tables
     models.Base.metadata.create_all(bind=db.engine)
+    
+    # Initialize and start OBSERVER service
+    _observer = observer.LocalObserver(
+        db_session_factory=db.SessionLocal,
+        operator=_operator,
+        check_interval=5.0
+    )
+    _observer.start()
+    logger.info("OBSERVER service started")
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    global _observer
+    # Stop OBSERVER service
+    if _observer:
+        _observer.stop()
+        logger.info("OBSERVER service stopped")
 
 
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok"}
+
+
+@app.get("/observer/status", tags=["observer"])
+def observer_status():
+    """Get OBSERVER service status and last detected issues."""
+    global _observer
+    if not _observer:
+        return {"status": "not_initialized", "issues": []}
+    
+    return {
+        "status": "running" if _observer.running else "stopped",
+        "check_interval": _observer.check_interval,
+        "last_issues_count": len(_observer.last_issues),
+        "last_issues": [
+            {
+                "issue_type": issue.issue_type,
+                "resource_id": issue.resource_id,
+                "details": issue.details
+            }
+            for issue in _observer.last_issues
+        ]
+    }
 
 
 @app.get("/openapi.yaml", tags=["meta"])

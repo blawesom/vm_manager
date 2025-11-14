@@ -14,9 +14,10 @@ import logging
 import subprocess
 import threading
 import time
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional, Callable
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -55,16 +56,21 @@ class LocalObserver(ObserverInterface):
     - Orphan QEMU processes or disk files not in the database.
     """
 
-    def __init__(self, db_operator=None, operator=None, check_interval: float = 5.0):
+    def __init__(self, db_session_factory: Optional[Callable] = None, operator=None, 
+                 storage_path: Optional[Path] = None, check_interval: float = 5.0):
         """Initialize observer.
 
         Args:
-            db_operator: Reference to DB_OPERATOR for querying VM and disk state.
-            operator: Reference to OPERATOR (mainly for logging; not used for checks).
+            db_session_factory: Callable that returns a DB session (e.g., SessionLocal).
+            operator: Reference to OPERATOR for storage path and VM process checks.
+            storage_path: Base storage path for VMs and disks (from operator if not provided).
             check_interval: Time in seconds between checks (will be clamped to ≤5s).
         """
-        self.db_operator = db_operator
+        self.db_session_factory = db_session_factory
         self.operator = operator
+        self.storage_path = Path(storage_path) if storage_path else (
+            Path(operator.storage_path) if operator else Path(os.environ.get("VMAN_STORAGE_PATH", "/var/lib/vman"))
+        )
         self.check_interval = min(float(check_interval), 5.0)
         self.running = False
         self.thread: Optional[threading.Thread] = None
@@ -87,21 +93,58 @@ class LocalObserver(ObserverInterface):
         """Check VM state coherence against QEMU processes."""
         issues = []
 
-        if not self.db_operator:
-            logger.warning("db_operator not set; skipping VM coherence check")
+        if not self.db_session_factory:
+            logger.warning("db_session_factory not set; skipping VM coherence check")
             return issues
 
         try:
-            # Get list of running QEMU processes (simple grep-based check).
+            # Get list of running QEMU processes
             running_pids = self._get_running_qemu_pids()
+            # Get VM IDs from PID files
+            running_vm_ids = self._get_vm_ids_from_pid_files()
         except Exception as e:
             logger.error("Failed to get QEMU processes: %s", e)
             return issues
 
         try:
-            # Query all VMs from DB (this is pseudocode; adapt to actual db_operator).
-            # For now, we'll log that we'd check VMs.
-            logger.debug("Checking VM coherence: running_pids=%s", running_pids)
+            # Import here to avoid circular imports
+            from . import models
+            
+            # Query all VMs from DB
+            db_session = self.db_session_factory()
+            try:
+                db_vms = db_session.query(models.VM).all()
+                
+                # Check each DB VM
+                for vm in db_vms:
+                    vm_running = vm.id in running_vm_ids
+                    
+                    if vm.state == "running" and not vm_running:
+                        # DB says running but process not found
+                        issues.append(CoherenceIssue(
+                            issue_type="vm_state_mismatch",
+                            resource_id=vm.id,
+                            details=f"DB state is 'running' but QEMU process not found"
+                        ))
+                    elif vm.state != "running" and vm_running:
+                        # DB says stopped but process is running
+                        issues.append(CoherenceIssue(
+                            issue_type="vm_state_mismatch",
+                            resource_id=vm.id,
+                            details=f"DB state is '{vm.state}' but QEMU process is running"
+                        ))
+                
+                # Check for orphan processes (running but not in DB)
+                db_vm_ids = {vm.id for vm in db_vms}
+                for vm_id in running_vm_ids:
+                    if vm_id not in db_vm_ids:
+                        issues.append(CoherenceIssue(
+                            issue_type="orphan_process",
+                            resource_id=vm_id,
+                            details="QEMU process running but VM not found in database"
+                        ))
+            finally:
+                db_session.close()
         except Exception as e:
             logger.error("Failed to query VMs from DB: %s", e)
 
@@ -111,19 +154,91 @@ class LocalObserver(ObserverInterface):
         """Check disk state coherence against filesystem."""
         issues = []
 
-        if not self.db_operator:
-            logger.warning("db_operator not set; skipping disk coherence check")
+        if not self.db_session_factory:
+            logger.warning("db_session_factory not set; skipping disk coherence check")
             return issues
 
         try:
-            # Query all disks from DB (this is pseudocode; adapt to actual db_operator).
-            # For each disk, check if its file exists on the filesystem.
-            logger.debug("Checking disk coherence")
+            # Import here to avoid circular imports
+            from . import models
+            
+            # Query all disks from DB
+            db_session = self.db_session_factory()
+            try:
+                db_disks = db_session.query(models.Disk).all()
+                
+                # Check each DB disk
+                for disk in db_disks:
+                    disk_path = self.storage_path / "disks" / f"{disk.id}.qcow2"
+                    
+                    if not disk_path.exists():
+                        # DB has disk record but file doesn't exist
+                        issues.append(CoherenceIssue(
+                            issue_type="missing_disk",
+                            resource_id=disk.id,
+                            details=f"Disk file not found: {disk_path}"
+                        ))
+                    elif disk.state == "attached" and not disk.vm_id:
+                        # Disk marked as attached but no VM ID
+                        issues.append(CoherenceIssue(
+                            issue_type="disk_state_inconsistent",
+                            resource_id=disk.id,
+                            details="Disk state is 'attached' but vm_id is None"
+                        ))
+                    elif disk.state == "available" and disk.vm_id:
+                        # Disk marked as available but has VM ID
+                        issues.append(CoherenceIssue(
+                            issue_type="disk_state_inconsistent",
+                            resource_id=disk.id,
+                            details=f"Disk state is 'available' but attached to VM {disk.vm_id}"
+                        ))
+                
+                # Check for orphan disk files (exist but not in DB)
+                disks_dir = self.storage_path / "disks"
+                if disks_dir.exists():
+                    db_disk_ids = {disk.id for disk in db_disks}
+                    for disk_file in disks_dir.glob("*.qcow2"):
+                        disk_id = disk_file.stem  # filename without .qcow2
+                        if disk_id not in db_disk_ids:
+                            issues.append(CoherenceIssue(
+                                issue_type="orphan_disk",
+                                resource_id=disk_id,
+                                details=f"Disk file exists but not found in database: {disk_file}"
+                            ))
+            finally:
+                db_session.close()
         except Exception as e:
             logger.error("Failed to query disks from DB: %s", e)
 
         return issues
 
+    def _get_vm_ids_from_pid_files(self) -> List[str]:
+        """Get list of VM IDs from PID files in storage directory.
+        
+        Returns:
+            List of VM IDs that have PID files (indicating they should be running).
+        """
+        vm_ids = []
+        vms_dir = self.storage_path / "vms"
+        
+        if not vms_dir.exists():
+            return vm_ids
+        
+        for vm_dir in vms_dir.iterdir():
+            if vm_dir.is_dir():
+                pid_file = vm_dir / "qemu.pid"
+                if pid_file.exists():
+                    # Check if process is actually running
+                    try:
+                        pid = int(pid_file.read_text().strip())
+                        os.kill(pid, 0)  # Signal 0 checks if process exists
+                        vm_ids.append(vm_dir.name)
+                    except (ValueError, OSError, ProcessLookupError):
+                        # PID file exists but process is dead - this will be caught by VM coherence check
+                        pass
+        
+        return vm_ids
+    
     def _get_running_qemu_pids(self) -> List[int]:
         """Get list of running QEMU process IDs using pgrep or ps.
 

@@ -48,3 +48,5 @@ Steps for development
 2) Implement INTEL service following openAPI description file
 3) Implement OPERATOR service to handle QEMU and files. Add interfaces to the INTEL service
 4) Implement OBSERVER service to enforce database coherence (5s polling)
+5) Implement test for safety and security verification
+6) Implement unified logs for all services and agent
