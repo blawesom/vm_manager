@@ -1,0 +1,181 @@
+@startuml VMAN Class Diagram
+
+!define SERVICE_COLOR #E1F5FF
+!define MODEL_COLOR #FFF4E1
+!define INTERFACE_COLOR #E8F5E9
+
+package "Database Models" MODEL_COLOR {
+    class VMTemplate {
+        +String name {PK}
+        +Integer cpu_count
+        +Integer ram_amount
+    }
+    
+    class VM {
+        +String id {PK}
+        +String template_name {FK}
+        +String state
+        +String local_ip
+    }
+    
+    class Disk {
+        +String id {PK}
+        +Integer size
+        +String mount_point
+        +String state
+        +String vm_id {FK}
+    }
+    
+    VM "1" --> "1" VMTemplate : uses template
+    Disk "0..*" --> "0..1" VM : attached to
+}
+
+package "Schemas (Pydantic)" MODEL_COLOR {
+    class VMTemplateCreate {
+        +String name
+        +Integer cpu_count
+        +Integer ram_amount
+    }
+    
+    class VMCreate {
+        +String template_name
+        +String name {optional}
+    }
+    
+    class DiskCreate {
+        +Integer size
+        +String mount_point {optional}
+    }
+}
+
+package "Services" SERVICE_COLOR {
+    class LocalOperator {
+        -Path storage_path
+        -str qemu_bin
+        -str qemu_img
+        -bool dry_run
+        -NetworkManager network_manager
+        +create_disk_image(path, size_gb)
+        +delete_disk_image(path)
+        +start_vm(vm_id, qcow2_path, cpu_count, ram_gb)
+        +stop_vm(vm_id, force)
+        +attach_disk(vm_id, disk_path, device)
+        +detach_disk(vm_id, device)
+        -_qmp_command(qmp_sock, command)
+        -_is_vm_running(vm_id)
+        -_get_vm_dir(vm_id)
+    }
+    
+    class LocalObserver {
+        -SessionFactory db_session_factory
+        -LocalOperator operator
+        -float check_interval
+        -bool running
+        -List[CoherenceIssue] last_issues
+        +start()
+        +stop()
+        -_check_coherence()
+        -_check_vm_coherence()
+        -_check_disk_coherence()
+    }
+    
+    class NetworkManager {
+        -int vlan_id
+        -str bridge_name
+        -IPNetwork subnet
+        -str gateway
+        -List[str] dns
+        -Set[str] allocated_ips
+        -bool dry_run
+        +ensure_bridge()
+        +allocate_ip(vm_id)
+        +release_ip(ip)
+        +create_tap_interface(vm_id)
+        +delete_tap_interface(tap_name)
+        +get_network_config()
+        -_run_command(cmd)
+        -_interface_exists(interface)
+    }
+    
+    class UnifiedLogger {
+        {static} +configure()
+        {static} +get_logger(module_name, service)
+        {static} +log_request(logger, method, path, status_code, duration_ms)
+        {static} +log_error(logger, operation, error, context)
+        {static} +log_coherence_issue(logger, issue_type, resource_id, details)
+    }
+}
+
+package "Interfaces" INTERFACE_COLOR {
+    interface OperatorInterface {
+        +create_disk_image(path, size_gb)
+        +delete_disk_image(path)
+        +start_vm(vm_id, qcow2_path, cpu_count, ram_gb)
+        +stop_vm(vm_id, force)
+        +attach_disk(vm_id, disk_path, device)
+        +detach_disk(vm_id, device)
+    }
+    
+    interface ObserverInterface {
+        +start()
+        +stop()
+    }
+}
+
+package "Data Structures" {
+    class NetworkConfig {
+        +int vlan_id
+        +str bridge_name
+        +str subnet
+        +str gateway
+        +List[str] dns
+    }
+    
+    class CoherenceIssue {
+        +str issue_type
+        +str resource_id
+        +str details
+    }
+}
+
+' Relationships
+LocalOperator ..|> OperatorInterface : implements
+LocalObserver ..|> ObserverInterface : implements
+LocalOperator --> NetworkManager : uses
+LocalObserver --> LocalOperator : uses
+LocalOperator --> UnifiedLogger : uses
+LocalObserver --> UnifiedLogger : uses
+NetworkManager --> NetworkConfig : returns
+LocalObserver --> CoherenceIssue : creates
+
+' Database relationships
+VM --> VMTemplate : references
+Disk --> VM : references
+
+note right of LocalOperator
+  Handles QEMU operations:
+  - VM lifecycle (start/stop)
+  - Disk image creation/deletion
+  - Disk hot-plugging via QMP
+  - Process tracking via PID files
+end note
+
+note right of NetworkManager
+  Manages VLAN networking:
+  - Bridge interface (br-vman)
+  - TAP interfaces per VM
+  - IP address allocation
+  - Network resource cleanup
+end note
+
+note right of LocalObserver
+  Monitors coherence:
+  - Checks DB vs QEMU processes
+  - Checks DB vs disk files
+  - Detects orphan resources
+  - Runs every 5 seconds
+end note
+
+@enduml
+
+

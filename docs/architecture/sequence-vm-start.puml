@@ -1,0 +1,91 @@
+@startuml VM Start Sequence
+
+actor Client
+participant "INTEL Service" as INTEL
+participant "Database" as DB
+participant "OPERATOR Service" as OPERATOR
+participant "NetworkManager" as NET
+participant "QEMU" as QEMU
+participant "Filesystem" as FS
+participant "UnifiedLogger" as LOG
+
+Client -> INTEL: POST /vms/{vm_id}/actions/start
+activate INTEL
+
+INTEL -> DB: Query VM and Template
+DB --> INTEL: VM, VMTemplate
+
+alt VM not found or invalid state
+    INTEL --> Client: 404/400 Error
+    deactivate INTEL
+else Valid request
+    INTEL -> OPERATOR: start_vm(vm_id, qcow2_path, cpu_count, ram_gb)
+    activate OPERATOR
+    
+    OPERATOR -> FS: Check/create root disk
+    FS --> OPERATOR: root.qcow2 path
+    
+    OPERATOR -> NET: ensure_bridge()
+    activate NET
+    NET -> NET: Create bridge if needed
+    NET -> NET: Configure bridge IP
+    NET --> OPERATOR: Bridge ready
+    deactivate NET
+    
+    OPERATOR -> NET: create_tap_interface(vm_id)
+    activate NET
+    NET -> NET: Create TAP interface
+    NET -> NET: Add to bridge
+    NET --> OPERATOR: tap-{vm_id}
+    deactivate NET
+    
+    OPERATOR -> NET: allocate_ip(vm_id)
+    activate NET
+    NET -> NET: Find available IP
+    NET -> NET: Track allocation
+    NET --> OPERATOR: IP address
+    deactivate NET
+    
+    OPERATOR -> FS: Store IP and TAP info
+    FS --> OPERATOR: OK
+    
+    OPERATOR -> QEMU: Launch QEMU process
+    activate QEMU
+    QEMU -> QEMU: Start VM with TAP interface
+    QEMU --> OPERATOR: Process started
+    deactivate QEMU
+    
+    OPERATOR -> LOG: Log VM start
+    OPERATOR --> INTEL: Success
+    
+    INTEL -> FS: Read assigned IP
+    FS --> INTEL: IP address
+    
+    INTEL -> DB: Update VM state = "running", local_ip
+    DB --> INTEL: Updated
+    
+    INTEL -> LOG: Log request
+    INTEL --> Client: 202 Accepted {status: "started"}
+    deactivate OPERATOR
+    deactivate INTEL
+end
+
+note right of NET
+  Network resources:
+  - Bridge interface (br-vman)
+  - TAP interface (tap-{vm_id})
+  - IP address from subnet
+end note
+
+note right of OPERATOR
+  QEMU command includes:
+  - CPU, RAM from template
+  - Root disk path
+  - TAP interface for networking
+  - QMP socket for management
+  - PID file for tracking
+end note
+
+@enduml
+
+

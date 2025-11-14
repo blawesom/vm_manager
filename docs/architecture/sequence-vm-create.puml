@@ -1,0 +1,34 @@
+@startuml VM Creation Sequence
+
+actor Client
+participant "INTEL Service" as INTEL
+participant "Database" as DB
+participant "OPERATOR Service" as OPERATOR
+participant "UnifiedLogger" as LOG
+
+Client -> INTEL: POST /vms {template_name}
+activate INTEL
+
+INTEL -> DB: Query template
+DB --> INTEL: VMTemplate
+
+alt Template not found
+    INTEL --> Client: 404 Not Found
+    deactivate INTEL
+else Template found
+    INTEL -> DB: Create VM record
+    INTEL -> LOG: Log VM creation
+    DB --> INTEL: VM created
+    INTEL --> Client: 201 Created {vm_id, state: "created"}
+    deactivate INTEL
+end
+
+note right of INTEL
+  VM is created in "created" state
+  No QEMU process started yet
+  No network resources allocated
+end note
+
+@enduml
+
+

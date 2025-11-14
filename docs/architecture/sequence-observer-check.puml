@@ -1,0 +1,75 @@
+@startuml Observer Coherence Check Sequence
+
+participant "OBSERVER Service" as OBSERVER
+participant "Database" as DB
+participant "OPERATOR Service" as OPERATOR
+participant "QEMU Processes" as QEMU
+participant "Filesystem" as FS
+participant "UnifiedLogger" as LOG
+
+loop Every 5 seconds
+    OBSERVER -> OBSERVER: _check_coherence()
+    activate OBSERVER
+    
+    ' Check VM coherence
+    OBSERVER -> DB: Query all VMs
+    DB --> OBSERVER: List of VMs
+    
+    OBSERVER -> OPERATOR: Check running VMs
+    activate OPERATOR
+    OPERATOR -> FS: Read PID files
+    FS --> OPERATOR: List of running VMs
+    OPERATOR --> OBSERVER: Running VM IDs
+    deactivate OPERATOR
+    
+    OBSERVER -> OBSERVER: Compare DB vs QEMU
+    
+    alt VM in DB but not running (state=running)
+        OBSERVER -> OBSERVER: Detect inconsistency
+        OBSERVER -> LOG: Log coherence issue
+        OBSERVER -> DB: Update VM state = "stopped"
+    end
+    
+    alt VM running but not in DB
+        OBSERVER -> OBSERVER: Detect orphan VM
+        OBSERVER -> LOG: Log coherence issue
+    end
+    
+    ' Check Disk coherence
+    OBSERVER -> DB: Query all Disks
+    DB --> OBSERVER: List of Disks
+    
+    OBSERVER -> FS: Check disk files
+    activate FS
+    FS -> FS: List disk.qcow2 files
+    FS --> OBSERVER: Existing disk files
+    deactivate FS
+    
+    OBSERVER -> OBSERVER: Compare DB vs Filesystem
+    
+    alt Disk in DB but file missing
+        OBSERVER -> OBSERVER: Detect inconsistency
+        OBSERVER -> LOG: Log coherence issue
+        OBSERVER -> DB: Update Disk state = "error"
+    end
+    
+    alt Disk file exists but not in DB
+        OBSERVER -> OBSERVER: Detect orphan disk
+        OBSERVER -> LOG: Log coherence issue
+    end
+    
+    OBSERVER -> OBSERVER: Store issues in last_issues
+    OBSERVER -> LOG: Log coherence check complete
+    deactivate OBSERVER
+end
+
+note right of OBSERVER
+  Coherence checks:
+  - VM state vs QEMU processes
+  - Disk state vs filesystem
+  - Orphan resource detection
+  - Automatic state correction
+end note
+
+@enduml
+

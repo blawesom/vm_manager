@@ -1,0 +1,121 @@
+@startuml VMAN Deployment Diagram
+
+!define APP_COLOR #E1F5FF
+!define DATA_COLOR #E8F5E9
+!define NET_COLOR #FFF4E1
+!define EXT_COLOR #FFE1E1
+
+node "Application Server" APP_COLOR {
+    component [INTEL Service] as INTEL {
+        [FastAPI] as FastAPI
+        [REST Endpoints] as REST
+    }
+    
+    component [OPERATOR Service] as OPERATOR {
+        [QEMU Manager] as QEMUMgr
+        [Disk Manager] as DiskMgr
+    }
+    
+    component [OBSERVER Service] as OBSERVER {
+        [Coherence Checker] as Checker
+    }
+    
+    component [NetworkManager] as NETMgr {
+        [Bridge Manager] as BridgeMgr
+        [IP Allocator] as IPAlloc
+    }
+    
+    component [UnifiedLogger] as Logger {
+        [Log Handler] as LogHandler
+    }
+}
+
+database "SQLite Database" DATA_COLOR {
+    [states.db] as DB
+    [VMTemplate Table] as TemplateTable
+    [VM Table] as VMTable
+    [Disk Table] as DiskTable
+}
+
+storage "Filesystem Storage" DATA_COLOR {
+    folder "VM Storage" {
+        [vms/] as VMStorage
+        [vms/{vm_id}/] as VMDir
+        [root.qcow2] as RootDisk
+        [qemu.pid] as PIDFile
+        [qmp.sock] as QMPSock
+    }
+    
+    folder "Disk Storage" {
+        [disks/] as DiskStorage
+        [{disk_id}.qcow2] as DiskFile
+    }
+    
+    folder "Logs" {
+        [vman.log] as LogFile
+    }
+}
+
+node "Network Layer" NET_COLOR {
+    interface "Bridge Interface" as Bridge {
+        [br-vman] as BridgeIF
+    }
+    
+    interface "TAP Interfaces" as TAP {
+        [tap-{vm_id}] as TAPIF
+    }
+}
+
+node "QEMU Processes" EXT_COLOR {
+    process "qemu-system-x86_64" as QEMUProc {
+        [VM Instance] as VMInst
+    }
+    
+    process "qemu-img" as QEMUImg
+}
+
+' Connections
+INTEL --> DB : SQLAlchemy ORM
+INTEL --> OPERATOR : Method calls
+INTEL --> Logger : Logging
+
+OPERATOR --> QEMUProc : subprocess
+OPERATOR --> QEMUImg : subprocess
+OPERATOR --> VMStorage : File I/O
+OPERATOR --> NETMgr : Network setup
+
+OBSERVER --> DB : SQLAlchemy ORM
+OBSERVER --> OPERATOR : Check processes
+OBSERVER --> VMStorage : Check files
+OBSERVER --> Logger : Logging
+
+NETMgr --> BridgeIF : ip link
+NETMgr --> TAPIF : ip tuntap
+BridgeIF --> TAPIF : Bridge connection
+
+QEMUProc --> RootDisk : Disk access
+QEMUProc --> TAPIF : Network access
+QEMUProc --> QMPSock : QMP protocol
+
+Logger --> LogFile : File output
+
+note right of Application Server
+  All services run in
+  single Python process
+  (uvicorn/FastAPI)
+end note
+
+note right of Network Layer
+  Bridge and TAP interfaces
+  require root or
+  CAP_NET_ADMIN
+end note
+
+note right of QEMU Processes
+  Each VM runs as
+  separate QEMU process
+  with PID tracking
+end note
+
+@enduml
+

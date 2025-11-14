@@ -1,0 +1,135 @@
+@startuml VMAN Component Diagram
+
+!define SERVICE_COLOR #E1F5FF
+!define EXTERNAL_COLOR #FFE1E1
+!define DATA_COLOR #E8F5E9
+
+package "VMAN System" {
+    
+    component [INTEL Service] SERVICE_COLOR {
+        [REST API] as REST
+        [Request Handler] as Handler
+        [Database Session] as DBSession
+    }
+    
+    component [OPERATOR Service] SERVICE_COLOR {
+        [QEMU Manager] as QEMUMgr
+        [Disk Manager] as DiskMgr
+        [Process Tracker] as ProcTracker
+    }
+    
+    component [OBSERVER Service] SERVICE_COLOR {
+        [Coherence Checker] as Coherence
+        [Issue Detector] as Detector
+    }
+    
+    component [NetworkManager] SERVICE_COLOR {
+        [Bridge Manager] as BridgeMgr
+        [TAP Manager] as TAPMgr
+        [IP Allocator] as IPAlloc
+    }
+    
+    component [UnifiedLogger] SERVICE_COLOR {
+        [Log Handler] as LogHandler
+        [File Rotator] as Rotator
+    }
+    
+    database "STATES DB\n(SQLite)" DATA_COLOR {
+        [VMTemplate Table] as TemplateTable
+        [VM Table] as VMTable
+        [Disk Table] as DiskTable
+    }
+    
+    component "QEMU" EXTERNAL_COLOR {
+        [qemu-system-x86_64] as QEMUBin
+        [qemu-img] as QEMUImg
+        [QMP Socket] as QMP
+    }
+    
+    component "Filesystem" EXTERNAL_COLOR {
+        [VM Storage] as VMStorage
+        [Disk Storage] as DiskStorage
+    }
+    
+    component "Network" EXTERNAL_COLOR {
+        [Bridge Interface] as Bridge
+        [TAP Interfaces] as TAP
+    }
+}
+
+' INTEL Service connections
+REST --> Handler
+Handler --> DBSession
+Handler --> QEMUMgr
+Handler --> DiskMgr
+Handler --> LogHandler
+
+' OPERATOR Service connections
+QEMUMgr --> QEMUBin
+QEMUMgr --> QMP
+QEMUMgr --> ProcTracker
+QEMUMgr --> BridgeMgr
+QEMUMgr --> TAPMgr
+DiskMgr --> QEMUImg
+DiskMgr --> DiskStorage
+QEMUMgr --> VMStorage
+
+' OBSERVER Service connections
+Coherence --> DBSession
+Coherence --> QEMUBin
+Coherence --> VMStorage
+Coherence --> DiskStorage
+Coherence --> Detector
+Detector --> LogHandler
+
+' NetworkManager connections
+BridgeMgr --> Bridge
+TAPMgr --> TAP
+IPAlloc --> VMTable
+
+' Database connections
+DBSession --> TemplateTable
+DBSession --> VMTable
+DBSession --> DiskTable
+
+' Logging connections
+Handler --> LogHandler
+QEMUMgr --> LogHandler
+Coherence --> LogHandler
+BridgeMgr --> LogHandler
+LogHandler --> Rotator
+
+note right of INTEL Service
+  Main REST API service
+  - Handles all HTTP requests
+  - Validates input via Pydantic
+  - Manages database sessions
+  - Coordinates with OPERATOR
+end note
+
+note right of OPERATOR Service
+  QEMU operations
+  - VM lifecycle management
+  - Disk image operations
+  - Process tracking
+  - Network setup
+end note
+
+note right of OBSERVER Service
+  Coherence monitoring
+  - Checks DB vs reality
+  - Detects inconsistencies
+  - Runs every 5 seconds
+end note
+
+note right of NetworkManager
+  Network management
+  - Bridge interface
+  - TAP interfaces
+  - IP allocation
+  - Resource cleanup
+end note
+
+@enduml
+
+

@@ -1,0 +1,74 @@
+@startuml Disk Attach Sequence
+
+actor Client
+participant "INTEL Service" as INTEL
+participant "Database" as DB
+participant "OPERATOR Service" as OPERATOR
+participant "QEMU QMP" as QMP
+participant "Filesystem" as FS
+participant "UnifiedLogger" as LOG
+
+Client -> INTEL: POST /disks/{disk_id}/attach {vm_id}
+activate INTEL
+
+INTEL -> DB: Query Disk and VM
+DB --> INTEL: Disk, VM
+
+alt Disk not found or already attached
+    INTEL --> Client: 404/400 Error
+    deactivate INTEL
+else VM not running
+    INTEL --> Client: 400 VM not running
+    deactivate INTEL
+else Valid request
+    INTEL -> FS: Get disk path
+    FS --> INTEL: disk.qcow2 path
+    
+    INTEL -> OPERATOR: attach_disk(vm_id, disk_path, device)
+    activate OPERATOR
+    
+    OPERATOR -> OPERATOR: Check VM is running
+    OPERATOR -> FS: Get QMP socket path
+    FS --> OPERATOR: qmp.sock
+    
+    OPERATOR -> QMP: Connect to QMP socket
+    activate QMP
+    QMP --> OPERATOR: Connected
+    
+    OPERATOR -> QMP: device_add (virtio-blk)
+    activate QMP
+    QMP -> QMP: Hot-plug disk
+    QMP --> OPERATOR: Success
+    deactivate QMP
+    
+    QMP --> OPERATOR: Disconnected
+    deactivate QMP
+    
+    OPERATOR -> LOG: Log disk attach
+    OPERATOR --> INTEL: Success
+    
+    INTEL -> DB: Update Disk state = "attached", vm_id, mount_point
+    DB --> INTEL: Updated
+    
+    INTEL -> LOG: Log request
+    INTEL --> Client: 200 OK {status: "attached"}
+    deactivate OPERATOR
+    deactivate INTEL
+end
+
+note right of QMP
+  QMP (QEMU Monitor Protocol)
+  allows hot-plugging without
+  stopping the VM
+end note
+
+note right of OPERATOR
+  Device naming:
+  - First disk: /dev/xvda
+  - Second disk: /dev/xvdb
+  - etc.
+end note
+
+@enduml
+
+
