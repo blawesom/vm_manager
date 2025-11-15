@@ -1,5 +1,77 @@
-.venv
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+test_results.txt
+tests.csv
+*.cover
+.cache
+nosetests.xml
+coverage.xml
+*.log
+
+# Database
+*.db
+*.sqlite
 *.sqlite3
-__pycache__
-*.pyc
+states.db
+
+# Logs
+logs/
+*.log
+
+# Storage (VM and disk files)
+storage/vms/
+storage/disks/
+storage/templates/*.qcow2
+storage/templates/*.img
+storage/templates/*.iso
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# QEMU and VM related
+*.qcow2
+*.img
+*.iso
+*.pid
+
+# Environment variables
+.env
+.env.local
+
+# OS
+Thumbs.db
 .DS_Store
