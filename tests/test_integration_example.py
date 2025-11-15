@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 
 @pytest.mark.integration
+@pytest.mark.timeout(600)  # 10 minutes timeout for integration tests
 def test_vm_lifecycle_example(
     test_client: TestClient,
     test_template: dict,
@@ -68,6 +69,7 @@ def test_vm_lifecycle_example(
 
 
 @pytest.mark.integration
+@pytest.mark.timeout(600)  # 10 minutes timeout for integration tests
 def test_disk_attach_detach_example(
     test_client: TestClient,
     test_template: dict,
