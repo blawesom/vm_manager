@@ -268,13 +268,14 @@ class LocalOperator(OperatorInterface):
 
     def delete_disk_image(self, path: Path) -> None:
         path = Path(path)
-        # Validate file existence (even in dry-run mode for safety)
-        if not path.exists():
-            raise OperatorError(f"Disk image not found: {path}")
         
         if self.dry_run:
             logger.info("dry-run: would delete disk %s", path)
             return
+        
+        # Validate file existence (only in real mode)
+        if not path.exists():
+            raise OperatorError(f"Disk image not found: {path}")
         
         try:
             path.unlink()
