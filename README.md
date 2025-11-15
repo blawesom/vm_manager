@@ -1,6 +1,7 @@
 # VMAN - Virtual Machine Manager
 
 A simple REST server to manage virtual machines with access to local storage and network.
+This project is coded entirely with various AI agents. Only tasks and steps are managed by account holder.
 
 ## Features
 
