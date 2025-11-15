@@ -17,6 +17,10 @@ A simple REST server to manage virtual machines with access to local storage and
 - **FastAPI**: REST API framework
 - **Python 3.10+**: Programming language
 
+## Architecture Support
+
+**VMAN only supports x86_64 architecture.** The service requires `qemu-system-x86_64` or `qemu-kvm` and will reject other architectures. This limitation ensures compatibility and simplifies the implementation.
+
 ## Architecture
 
 - **INTEL**: Main REST API service handling all API requests
@@ -29,8 +33,9 @@ A simple REST server to manage virtual machines with access to local storage and
 ### Prerequisites
 
 - Python 3.10 or higher
-- QEMU installed (`qemu-system-x86_64` or `qemu-kvm`)
+- QEMU installed (`qemu-system-x86_64` or `qemu-kvm`) - **x86_64 architecture only**
 - `qemu-img` tool available in PATH
+- Host system must be x86_64 compatible
 
 ### Installation
 
@@ -72,11 +77,35 @@ VMAN can be configured via environment variables. See `.env.example` for all ava
 ### Key Configuration Options
 
 - `VMAN_STORAGE_PATH`: Base directory for VM and disk storage (default: `/var/lib/vman`)
+- `VMAN_DEFAULT_BOOT_DISK`: Path to default boot disk image (qcow2) to use for all VMs (optional)
 - `VMAN_LOG_LEVEL`: Logging level - DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
 - `VMAN_LOG_DIR`: Log directory (default: `./logs`)
 - `VMAN_OPERATOR_DRY_RUN`: Enable dry-run mode for testing (default: 0)
 
 See `.env.example` for complete configuration reference.
+
+### Default Boot Disk
+
+You can configure a default boot disk that will be automatically used for all new VMs. This is useful when you have a pre-built bootable image (e.g., created with `scripts/build_boot_disk.sh`).
+
+**Setup:**
+1. Build a boot disk using the provided scripts:
+   ```bash
+   sudo ./scripts/build_boot_disk.sh
+   # Creates: storage/templates/alpine-minimal.qcow2
+   ```
+
+2. Set the environment variable:
+   ```bash
+   export VMAN_DEFAULT_BOOT_DISK=/path/to/storage/templates/alpine-minimal.qcow2
+   ```
+
+3. Start the service - all new VMs will automatically use this boot disk.
+
+**Behavior:**
+- When a VM is started without an existing `root.qcow2`, the default boot disk is copied to the VM's directory
+- Each VM gets its own copy of the boot disk (independent filesystem)
+- If `VMAN_DEFAULT_BOOT_DISK` is not set or the file doesn't exist, VMs will get an empty 10GB disk (default behavior)
 
 ## Usage Examples
 

@@ -78,23 +78,89 @@ class OperatorInterface(ABC):
 
 
 class LocalOperator(OperatorInterface):
-    """Local operator implementation with full QEMU support.
+    """Local operator implementation with full QEMU support for x86_64 architecture only.
 
     - `qemu-img` is used for disk image creation if available.
-    - `qemu-system-x86_64` or `qemu-kvm` is used for VM lifecycle management.
+    - `qemu-system-x86_64` or `qemu-kvm` is used for VM lifecycle management (x86_64 only).
     - QMP (QEMU Monitor Protocol) is used for hot-plugging disks.
     - Filesystem operations use pathlib and os.
+    
+    Note: VMAN only supports x86_64 architecture. Other architectures are not supported.
     """
 
-    def __init__(self, dry_run: bool = False, storage_path: Optional[Path] = None, network_manager=None):
+    def __init__(self, dry_run: bool = False, storage_path: Optional[Path] = None, 
+                 network_manager=None, default_boot_disk: Optional[Path] = None):
         self.qemu_img = shutil.which("qemu-img")
+        
+        # VMAN only supports x86_64 architecture
+        # Enforce x86_64 QEMU binary selection
         self.qemu_bin = shutil.which("qemu-system-x86_64") or shutil.which("qemu-kvm")
+        
         self.dry_run = bool(dry_run or os.environ.get("VMAN_OPERATOR_DRY_RUN") == "1")
+        
+        # Validate that we have an x86_64 QEMU binary (skip in dry-run mode)
+        if self.qemu_bin and not self.dry_run:
+            self._validate_x86_64_qemu()
         self.storage_path = Path(storage_path or os.environ.get("VMAN_STORAGE_PATH", "/var/lib/vman"))
         self.network_manager = network_manager
-        logger.debug("LocalOperator init: qemu-img=%s qemu-bin=%s storage=%s dry_run=%s network=%s",
+        
+        # Default boot disk configuration
+        default_boot_disk_env = os.environ.get("VMAN_DEFAULT_BOOT_DISK")
+        if default_boot_disk is None and default_boot_disk_env:
+            default_boot_disk = Path(default_boot_disk_env)
+        self.default_boot_disk = Path(default_boot_disk) if default_boot_disk else None
+        
+        if self.default_boot_disk and not self.default_boot_disk.exists():
+            logger.warning("Default boot disk specified but not found: %s", self.default_boot_disk)
+            self.default_boot_disk = None
+        
+        logger.debug("LocalOperator init: qemu-img=%s qemu-bin=%s storage=%s dry_run=%s network=%s default_boot_disk=%s",
                     self.qemu_img, self.qemu_bin, self.storage_path, self.dry_run,
-                    "enabled" if network_manager else "disabled")
+                    "enabled" if network_manager else "disabled",
+                    self.default_boot_disk if self.default_boot_disk else "none")
+    
+    def _validate_x86_64_qemu(self) -> None:
+        """Validate that the QEMU binary is x86_64 architecture.
+        
+        Raises OperatorError if the binary is not x86_64 or cannot be validated.
+        """
+        if not self.qemu_bin:
+            return
+        
+        # Check binary name for x86_64 architecture
+        qemu_bin_name = Path(self.qemu_bin).name
+        if "x86_64" not in qemu_bin_name and "kvm" not in qemu_bin_name:
+            # Check for other architectures that should be rejected
+            for arch in ["arm", "aarch64", "ppc", "riscv", "s390x", "mips", "sparc"]:
+                if arch in qemu_bin_name.lower():
+                    raise OperatorError(
+                        f"VMAN only supports x86_64 architecture. "
+                        f"Found {arch} QEMU binary: {self.qemu_bin}. "
+                        f"Please install qemu-system-x86_64 or qemu-kvm."
+                    )
+        
+        # Try to query QEMU for supported architectures
+        try:
+            result = subprocess.run(
+                [self.qemu_bin, "-machine", "help"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                # Check if x86_64 machines are available
+                output = result.stdout.lower()
+                if "q35" not in output and "pc" not in output:
+                    logger.warning(
+                        "QEMU binary may not support x86_64. "
+                        "Expected q35 or pc machine types, but they were not found."
+                    )
+        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+            # If we can't validate, log a warning but don't fail
+            logger.warning(
+                "Could not validate QEMU architecture. "
+                "Ensure qemu-system-x86_64 or qemu-kvm is installed."
+            )
     
     def _get_vm_dir(self, vm_id: str) -> Path:
         """Get VM-specific directory."""
@@ -238,7 +304,10 @@ class LocalOperator(OperatorInterface):
             raise OperatorError(f"VM {vm_id} is already running")
         
         if not self.qemu_bin:
-            raise OperatorError("qemu-system-x86_64 or qemu-kvm not found in PATH")
+            raise OperatorError(
+                "qemu-system-x86_64 or qemu-kvm not found in PATH. "
+                "VMAN only supports x86_64 architecture."
+            )
         
         # Setup VM directory
         vm_dir = self._get_vm_dir(vm_id)
@@ -253,11 +322,19 @@ class LocalOperator(OperatorInterface):
         if qcow2_path is None:
             qcow2_path = vm_dir / "root.qcow2"
             if not qcow2_path.exists():
-                # Create minimal root disk (10GB default)
-                if not self.qemu_img:
-                    raise OperatorError("qemu-img not found; cannot create root disk")
-                cmd = [self.qemu_img, "create", "-f", "qcow2", str(qcow2_path), "10G"]
-                subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                # Use default boot disk if configured, otherwise create empty disk
+                if self.default_boot_disk and self.default_boot_disk.exists():
+                    logger.info("Using default boot disk %s for VM %s", self.default_boot_disk, vm_id)
+                    # Copy default boot disk to VM directory (each VM gets its own copy)
+                    shutil.copy2(self.default_boot_disk, qcow2_path)
+                    logger.debug("Copied default boot disk to %s", qcow2_path)
+                else:
+                    # Create minimal root disk (10GB default) if no default boot disk
+                    if not self.qemu_img:
+                        raise OperatorError("qemu-img not found; cannot create root disk")
+                    logger.info("Creating empty root disk for VM %s", vm_id)
+                    cmd = [self.qemu_img, "create", "-f", "qcow2", str(qcow2_path), "10G"]
+                    subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         if not qcow2_path.exists():
             raise OperatorError(f"Root disk not found: {qcow2_path}")
@@ -297,12 +374,12 @@ class LocalOperator(OperatorInterface):
                 tap_name = None
                 vm_ip = None
         
-        # Build QEMU command
+        # Build QEMU command (x86_64 architecture only)
         cmd = [
             self.qemu_bin,
             "-name", vm_id,
-            "-machine", "type=q35,accel=kvm:tcg",
-            "-cpu", "host",
+            "-machine", "type=q35,accel=kvm:tcg",  # q35 is x86_64 specific
+            "-cpu", "host",  # Use host CPU (x86_64)
             "-smp", str(cpu_count),
             "-m", f"{ram_gb}G",
             "-drive", f"file={qcow2_path},format=qcow2,if=virtio,id=drive0",

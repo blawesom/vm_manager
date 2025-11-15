@@ -62,7 +62,14 @@ _network_manager = network_manager.NetworkManager(
     dry_run=os.environ.get("VMAN_OPERATOR_DRY_RUN") == "1"
 )
 
-_operator = operator.LocalOperator(network_manager=_network_manager)
+# Default boot disk configuration
+_default_boot_disk = os.environ.get("VMAN_DEFAULT_BOOT_DISK")
+_default_boot_disk_path = Path(_default_boot_disk) if _default_boot_disk else None
+
+_operator = operator.LocalOperator(
+    network_manager=_network_manager,
+    default_boot_disk=_default_boot_disk_path
+)
 _observer: Optional[observer.LocalObserver] = None
 
 
