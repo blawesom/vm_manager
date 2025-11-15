@@ -14,7 +14,85 @@ tags:
     description: VM lifecycle management
   - name: disks
     description: Disk lifecycle management
+  - name: health
+    description: Service health and status checks
+  - name: observer
+    description: OBSERVER service status
+  - name: network
+    description: Network configuration
+  - name: meta
+    description: Metadata endpoints
 paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check endpoint
+      operationId: health
+      description: |
+        Enhanced health check endpoint.
+        
+        Checks:
+        - Service status
+        - Database connectivity
+        - Storage directory accessibility
+        - QEMU binary availability
+        - OBSERVER service status
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /observer/status:
+    get:
+      tags: [observer]
+      summary: Get OBSERVER service status
+      operationId: observerStatus
+      description: Get OBSERVER service status and last detected issues.
+      responses:
+        '200':
+          description: Observer status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObserverStatus'
+  /network/config:
+    get:
+      tags: [network]
+      summary: Get network configuration
+      operationId: getNetworkConfig
+      description: Get current network configuration.
+      responses:
+        '200':
+          description: Network configuration
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/NetworkConfig'
+                  - $ref: '#/components/schemas/NetworkConfigNotConfigured'
+  /openapi.yaml:
+    get:
+      tags: [meta]
+      summary: Get OpenAPI specification
+      operationId: getOpenAPI
+      description: Returns the OpenAPI specification file.
+      responses:
+        '200':
+          description: OpenAPI specification file
+          content:
+            application/x-yaml:
+              schema:
+                type: string
+        '404':
+          description: OpenAPI spec not found
   /templates:
     post:
       tags: [templates]
@@ -95,7 +173,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [running, stopped, paused, error]
+            enum: [running, stopped, error]
           description: Filter by VM state
       responses:
         '200':
@@ -155,8 +233,14 @@ paths:
       responses:
         '202':
           description: Start initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
         '400':
           description: Invalid state transition
+        '404':
+          description: VM not found
   /vms/{vm_id}/actions/stop:
     post:
       tags: [vms]
@@ -171,8 +255,14 @@ paths:
       responses:
         '202':
           description: Stop initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
         '400':
           description: Invalid state transition
+        '404':
+          description: VM not found
   /vms/{vm_id}/actions/restart:
     post:
       tags: [vms]
@@ -187,8 +277,14 @@ paths:
       responses:
         '202':
           description: Restart initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
         '400':
           description: Invalid state transition
+        '404':
+          description: VM not found
 
   /disks:
     post:
@@ -278,8 +374,14 @@ paths:
       responses:
         '200':
           description: Disk attached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
         '400':
           description: Invalid request or already attached
+        '404':
+          description: Disk or VM not found
   /disks/{disk_id}/detach:
     post:
       tags: [disks]
@@ -294,8 +396,14 @@ paths:
       responses:
         '200':
           description: Disk detached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
         '400':
           description: Invalid request or not attached
+        '404':
+          description: Disk not found
 
 components:
   schemas:
@@ -323,7 +431,7 @@ components:
           $ref: '#/components/schemas/VMTemplate'
         state:
           type: string
-          enum: [running, stopped, paused, error]
+          enum: [running, stopped, error]
         local_ip:
           type: string
           format: ipv4
@@ -358,6 +466,80 @@ components:
         mount_point:
           type: string
       required: [size]
+    ActionStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [started, stopped, restarted, attached, detached]
+      required: [status]
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        service:
+          type: string
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+      required: [status, service, checks]
+    ObserverStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [running, stopped, not_initialized]
+        check_interval:
+          type: number
+          format: float
+        last_issues_count:
+          type: integer
+        last_issues:
+          type: array
+          items:
+            type: object
+            properties:
+              issue_type:
+                type: string
+              resource_id:
+                type: string
+              details:
+                type: string
+      required: [status]
+    NetworkConfig:
+      type: object
+      properties:
+        vlan_id:
+          type: integer
+        bridge_name:
+          type: string
+        subnet:
+          type: string
+        gateway:
+          type: string
+          nullable: true
+        dns:
+          type: array
+          items:
+            type: string
+          nullable: true
+        allocated_ips:
+          type: array
+          items:
+            type: string
+        available_ips:
+          type: integer
+      required: [vlan_id, bridge_name, subnet, allocated_ips, available_ips]
+    NetworkConfigNotConfigured:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [not_configured]
+      required: [status]
 
   responses:
     NotFound:

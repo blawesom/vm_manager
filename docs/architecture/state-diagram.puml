@@ -1,10 +1,7 @@
 @startuml VM and Disk State Diagrams
 
 state "VM State Machine" as VMState {
-    [*] --> created : POST /vms
-    
-    created --> running : POST /vms/{id}/actions/start
-    created --> [*] : DELETE /vms/{id}
+    [*] --> stopped : POST /vms
     
     running --> stopped : POST /vms/{id}/actions/stop
     running --> running : POST /vms/{id}/actions/restart
@@ -34,9 +31,8 @@ state "Disk State Machine" as DiskState {
 
 note right of VMState
   VM States:
-  - created: VM record exists, not started
+  - stopped: VM created or stopped, resources cleaned
   - running: QEMU process active
-  - stopped: VM stopped, resources cleaned
   - error: Operation failed
 end note
 
