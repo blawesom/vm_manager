@@ -97,7 +97,13 @@ def test_operator(temp_storage: Path, test_network_manager, qemu_available) -> o
     Uses temporary storage and test network manager.
     """
     # Determine if we should use dry-run
-    use_dry_run = os.environ.get("VMAN_OPERATOR_DRY_RUN", "1") == "1" or not qemu_available
+    # Check environment variable first, then fall back to checking QEMU availability
+    dry_run_env = os.environ.get("VMAN_OPERATOR_DRY_RUN")
+    if dry_run_env is not None:
+        use_dry_run = dry_run_env == "1"
+    else:
+        # If not explicitly set, use dry-run if QEMU not available
+        use_dry_run = not qemu_available
     
     return operator.LocalOperator(
         dry_run=use_dry_run,
@@ -161,12 +167,27 @@ def test_template(test_client: TestClient) -> Dict:
     
     Returns template data dict.
     """
+    # Try to create template, handle case where it might already exist
     response = test_client.post("/templates", json={
         "name": "test-template",
         "cpu_count": 1,
         "ram_amount": 512  # Small for fast tests
     })
-    assert response.status_code == 201
+    
+    if response.status_code == 400 and "already exists" in response.json().get("detail", "").lower():
+        # Template already exists, fetch it
+        response = test_client.get("/templates")
+        templates = response.json()
+        for template in templates:
+            if template["name"] == "test-template":
+                return template
+        # If not found in list, try to get it directly (though endpoint doesn't exist)
+        # Fall through to assertion error
+    elif response.status_code == 201:
+        return response.json()
+    
+    # If we get here, something went wrong
+    assert response.status_code == 201, f"Failed to create test template: {response.status_code} - {response.text}"
     return response.json()
 
 
