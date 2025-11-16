@@ -185,24 +185,38 @@ curl -X POST http://localhost:8000/disks/{disk_id}/attach \
 ### System
 - `GET /health` - Health check (enhanced with system checks)
 - `GET /observer/status` - OBSERVER service status
+- `GET /network/config` - Network configuration
 - `GET /openapi.yaml` - OpenAPI specification
 
 ## Testing
+
+The test suite includes **290 tests** covering:
+- Unit tests for all API endpoints
+- Integration tests with real QEMU (when available)
+- Security tests (SQL injection, path traversal)
+- Safety tests (error handling, edge cases)
+- API coverage tests for all endpoints and edge cases
 
 Run the test suite:
 
 ```bash
 # Install test dependencies
-pip install pytest pytest-cov
+pip install pytest pytest-cov pytest-timeout
 
 # Run all tests
 pytest
 
 # Run with coverage
 pytest --cov=app --cov-report=html --cov-report=term tests/
+
+# Run only unit tests (skip integration tests)
+pytest -m "not integration"
+
+# Run integration tests (requires QEMU)
+pytest -m integration
 ```
 
-Test coverage target: **80%**
+Test coverage target: **80%** (currently ~78%)
 
 ## Development
 

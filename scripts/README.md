@@ -14,7 +14,7 @@ These scripts create small, bootable qcow2 disk images that can be used as templ
 
 **Features:**
 - Creates minimal Alpine Linux installation
-- Installs GRUB bootloader
+- Installs extlinux bootloader (Alpine's standard bootloader)
 - Configures networking (DHCP)
 - Optimized for smallest possible size (~50-100MB compressed)
 - Fully automated
@@ -200,22 +200,28 @@ sudo modprobe loop max_loop=16
 
 ### Automatic Template Usage
 
-To automatically use the template when creating VMs, you could modify the operator:
+VMAN now supports automatic default boot disk usage via the `VMAN_DEFAULT_BOOT_DISK` environment variable.
 
-```python
-# In app/operator.py, start_vm method
-if qcow2_path is None:
-    qcow2_path = vm_dir / "root.qcow2"
-    if not qcow2_path.exists():
-        # Check for template
-        template_path = self.storage_path / "templates" / "alpine-minimal.qcow2"
-        if template_path.exists():
-            # Copy template
-            shutil.copy(template_path, qcow2_path)
-        else:
-            # Create empty disk (fallback)
-            self.create_disk_image(qcow2_path, size_gb=10)
-```
+**Setup:**
+1. Build a boot disk using the script:
+   ```bash
+   sudo ./scripts/build_boot_disk.sh
+   # Creates: storage/templates/alpine-minimal.qcow2
+   ```
+
+2. Set the environment variable:
+   ```bash
+   export VMAN_DEFAULT_BOOT_DISK=/path/to/storage/templates/alpine-minimal.qcow2
+   ```
+
+3. Start VMAN - all new VMs will automatically use this boot disk when started.
+
+**Behavior:**
+- When a VM is started without an existing `root.qcow2`, the default boot disk is automatically copied
+- Each VM gets its own independent copy of the boot disk
+- If `VMAN_DEFAULT_BOOT_DISK` is not set or the file doesn't exist, VMs will get an empty 10GB disk (default behavior)
+
+See the main README.md for more details on the default boot disk feature.
 
 ---
 
@@ -241,5 +247,5 @@ if qcow2_path is None:
 
 - [Alpine Linux](https://alpinelinux.org/)
 - [QEMU Disk Images](https://www.qemu.org/docs/master/system/images.html)
-- [GRUB Bootloader](https://www.gnu.org/software/grub/)
+- [extlinux Bootloader](https://wiki.syslinux.org/wiki/index.php?title=EXTLINUX) (Alpine's standard bootloader)
 
