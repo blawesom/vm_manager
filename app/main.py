@@ -475,6 +475,54 @@ def restart_vm(vm_id: str, db: Session = Depends(get_db)):
     return {"status": "restarted"}
 
 
+@app.get("/vms/{vm_id}/console", response_model=schemas.VMConsole)
+def get_vm_console(vm_id: str, db: Session = Depends(get_db)):
+    """Get VM console output.
+    
+    Returns the last 50kB of console output from the VM.
+    The console file is automatically truncated to keep only the most recent output.
+    """
+    vm = db.query(models.VM).filter(models.VM.id == vm_id).first()
+    if not vm:
+        raise HTTPException(status_code=404, detail="VM not found")
+    
+    # Truncate console file if needed before reading
+    vm_dir = Path(_operator.storage_path) / "vms" / vm_id
+    console_file = vm_dir / "console.txt"
+    
+    if not console_file.exists():
+        return {
+            "vm_id": vm_id,
+            "console": "",
+            "size": 0,
+            "file_size": 0,
+            "message": "Console file not found (VM may not have started yet)"
+        }
+    
+    # Truncate if needed
+    try:
+        _operator._truncate_console_if_needed(vm_id)
+    except Exception as e:
+        logger.warning(f"Failed to truncate console for VM {vm_id}: {e}")
+    
+    # Read console content
+    try:
+        with open(console_file, 'r', errors='replace') as f:
+            content = f.read()
+        
+        file_size = console_file.stat().st_size
+        
+        return {
+            "vm_id": vm_id,
+            "console": content,
+            "size": len(content),
+            "file_size": file_size
+        }
+    except Exception as e:
+        logger.error(f"Failed to read console for VM {vm_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to read console: {e}")
+
+
 # Disk endpoints
 @app.post("/disks", response_model=schemas.Disk, status_code=status.HTTP_201_CREATED)
 def create_disk(payload: schemas.DiskCreate, db: Session = Depends(get_db)):

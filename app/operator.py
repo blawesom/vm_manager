@@ -294,6 +294,45 @@ class LocalOperator(OperatorInterface):
             raise OperatorError(f"Storage directory not writable: {d}")
         return d
 
+    def _limit_console_file(self, console_file: Path, max_size: int = 50 * 1024) -> None:
+        """Limit console file to max_size bytes, keeping only the last portion.
+        
+        Args:
+            console_file: Path to console output file
+            max_size: Maximum file size in bytes (default: 50kB)
+        """
+        if not console_file.exists():
+            return
+        
+        try:
+            file_size = console_file.stat().st_size
+            if file_size <= max_size:
+                return
+            
+            # Read last max_size bytes
+            with open(console_file, 'rb') as f:
+                f.seek(-max_size, 2)  # Seek to (file_size - max_size) from end
+                content = f.read()
+            
+            # Write back truncated content
+            with open(console_file, 'wb') as f:
+                f.write(content)
+            
+            logger.debug(f"Truncated console file {console_file} to {max_size} bytes")
+        except Exception as e:
+            logger.warning(f"Failed to truncate console file {console_file}: {e}")
+
+    def _truncate_console_if_needed(self, vm_id: str) -> None:
+        """Truncate console file if it exceeds size limit."""
+        if self.dry_run:
+            return
+        
+        vm_dir = self._get_vm_dir(vm_id)
+        console_file = vm_dir / "console.txt"
+        
+        if console_file.exists():
+            self._limit_console_file(console_file)
+
     def start_vm(self, vm_id: str, qcow2_path: Optional[Path] = None,
                  cpu_count: int = 1, ram_gb: int = 1) -> None:
         """Start a VM with specified resources."""
@@ -343,6 +382,7 @@ class LocalOperator(OperatorInterface):
         # Build QEMU command
         pid_file = self._get_vm_pid_file(vm_id)
         log_file = vm_dir / "qemu.log"
+        console_file = vm_dir / "console.txt"
         
         # Network configuration
         tap_name = None
@@ -389,6 +429,7 @@ class LocalOperator(OperatorInterface):
             "-pidfile", str(pid_file),
             "-no-reboot",
             "-display", "none",
+            "-serial", f"file:{console_file}",  # Redirect serial console to file
         ]
         
         # Add network configuration

@@ -36,3 +36,10 @@ class Disk(BaseModel):
     size: int
     mount_point: Optional[str]
     state: str
+
+class VMConsole(BaseModel):
+    vm_id: str
+    console: str
+    size: int
+    file_size: Optional[int] = None
+    message: Optional[str] = None

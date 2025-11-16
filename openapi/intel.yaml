@@ -288,6 +288,31 @@ paths:
           description: Invalid state transition
         '404':
           description: VM not found
+  /vms/{vm_id}/console:
+    get:
+      tags: [vms]
+      summary: Get VM console output
+      operationId: getVMConsole
+      description: |
+        Returns the last 50kB of console output from the VM.
+        The console file is automatically truncated to keep only the most recent output.
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Console output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VMConsole'
+        '404':
+          description: VM not found
+        '500':
+          description: Failed to read console
 
   /disks:
     post:
@@ -476,6 +501,24 @@ components:
           type: string
           enum: [started, stopped, restarted, attached, detached]
       required: [status]
+    VMConsole:
+      type: object
+      properties:
+        vm_id:
+          type: string
+        console:
+          type: string
+          description: Console output content (last 50kB)
+        size:
+          type: integer
+          description: Size of console content in bytes
+        file_size:
+          type: integer
+          description: Actual file size in bytes (may be larger before truncation)
+        message:
+          type: string
+          description: Optional message (e.g., if console file not found)
+      required: [vm_id, console, size]
     HealthStatus:
       type: object
       properties:
