@@ -71,6 +71,7 @@ _operator = operator.LocalOperator(
     default_boot_disk=_default_boot_disk_path
 )
 _observer: Optional[observer.LocalObserver] = None
+_metadata_service: Optional[object] = None  # Will be metadata_service.MetadataService
 
 
 def get_db():
@@ -83,9 +84,39 @@ def get_db():
 
 @app.on_event("startup")
 def startup_event():
-    global _observer
+    global _observer, _metadata_service
     # create tables
     models.Base.metadata.create_all(bind=db.engine)
+    
+    # Initialize and start metadata service if enabled
+    metadata_enabled = os.environ.get("VMAN_METADATA_ENABLED", "1") == "1"
+    if metadata_enabled and _network_manager and not _network_manager.dry_run:
+        try:
+            from . import metadata_service
+            
+            # Ensure bridge is ready (this configures 169.254.169.254)
+            _network_manager.ensure_bridge()
+            
+            # Get configuration
+            bind_ip = os.environ.get("VMAN_METADATA_BIND_IP", "169.254.169.254")
+            port = int(os.environ.get("VMAN_METADATA_PORT", "80"))
+            bridge_name = _network_manager.bridge_name
+            storage_path = Path(_operator.storage_path)
+            
+            # Start metadata service
+            _metadata_service = metadata_service.MetadataService(
+                db_session_factory=db.SessionLocal,
+                storage_path=storage_path,
+                bind_ip=bind_ip,
+                port=port,
+                bridge_name=bridge_name
+            )
+            _metadata_service.start()
+            logger.info("Metadata service started")
+        except Exception as e:
+            logger.error(f"Failed to start metadata service: {e}", exc_info=True)
+            # Don't fail startup if metadata service fails
+            _metadata_service = None
     
     # Initialize and start OBSERVER service
     _observer = observer.LocalObserver(
@@ -99,11 +130,15 @@ def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _observer
+    global _observer, _metadata_service
     # Stop OBSERVER service
     if _observer:
         _observer.stop()
         logger.info("OBSERVER service stopped")
+    # Stop metadata service
+    if _metadata_service:
+        _metadata_service.stop()
+        logger.info("Metadata service stopped")
 
 
 @app.get("/health", tags=["health"])
@@ -521,6 +556,84 @@ def get_vm_console(vm_id: str, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Failed to read console for VM {vm_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to read console: {e}")
+
+
+@app.put("/vms/{vm_id}/metadata", response_model=schemas.VMMetadata, status_code=status.HTTP_200_OK)
+def update_vm_metadata(vm_id: str, payload: schemas.VMMetadataCreate, db: Session = Depends(get_db)):
+    """Set VM metadata (hostname, user-data, SSH keys) for cloud-init."""
+    vm = db.query(models.VM).filter(models.VM.id == vm_id).first()
+    if not vm:
+        raise HTTPException(status_code=404, detail="VM not found")
+    
+    # Get or create metadata
+    metadata = db.query(models.VMMetadata).filter(models.VMMetadata.vm_id == vm_id).first()
+    if not metadata:
+        metadata = models.VMMetadata(vm_id=vm_id)
+        db.add(metadata)
+    
+    # Update fields
+    if payload.hostname is not None:
+        metadata.hostname = payload.hostname
+    if payload.user_data is not None:
+        metadata.user_data = payload.user_data
+    if payload.ssh_keys is not None:
+        metadata.ssh_keys = payload.ssh_keys
+    
+    db.commit()
+    db.refresh(metadata)
+    
+    return {
+        "vm_id": metadata.vm_id,
+        "hostname": metadata.hostname,
+        "user_data": metadata.user_data,
+        "ssh_keys": metadata.ssh_keys,
+        "created_at": metadata.created_at.isoformat() if metadata.created_at else None,
+        "updated_at": metadata.updated_at.isoformat() if metadata.updated_at else None
+    }
+
+
+@app.get("/vms/{vm_id}/metadata", response_model=schemas.VMMetadata)
+def get_vm_metadata(vm_id: str, db: Session = Depends(get_db)):
+    """Get VM metadata."""
+    vm = db.query(models.VM).filter(models.VM.id == vm_id).first()
+    if not vm:
+        raise HTTPException(status_code=404, detail="VM not found")
+    
+    metadata = db.query(models.VMMetadata).filter(models.VMMetadata.vm_id == vm_id).first()
+    if not metadata:
+        # Return empty metadata
+        return {
+            "vm_id": vm_id,
+            "hostname": None,
+            "user_data": None,
+            "ssh_keys": None,
+            "created_at": None,
+            "updated_at": None
+        }
+    
+    return {
+        "vm_id": metadata.vm_id,
+        "hostname": metadata.hostname,
+        "user_data": metadata.user_data,
+        "ssh_keys": metadata.ssh_keys,
+        "created_at": metadata.created_at.isoformat() if metadata.created_at else None,
+        "updated_at": metadata.updated_at.isoformat() if metadata.updated_at else None
+    }
+
+
+@app.delete("/vms/{vm_id}/metadata", status_code=status.HTTP_204_NO_CONTENT)
+def delete_vm_metadata(vm_id: str, db: Session = Depends(get_db)):
+    """Clear VM metadata."""
+    vm = db.query(models.VM).filter(models.VM.id == vm_id).first()
+    if not vm:
+        raise HTTPException(status_code=404, detail="VM not found")
+    
+    metadata = db.query(models.VMMetadata).filter(models.VMMetadata.vm_id == vm_id).first()
+    if metadata:
+        db.delete(metadata)
+        db.commit()
+    
+    return None
 
 
 # Disk endpoints

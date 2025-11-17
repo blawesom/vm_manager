@@ -313,6 +313,71 @@ paths:
           description: VM not found
         '500':
           description: Failed to read console
+  /vms/{vm_id}/metadata:
+    put:
+      tags: [vms]
+      summary: Set VM metadata
+      operationId: updateVMMetadata
+      description: |
+        Set VM metadata for cloud-init support. This includes hostname, user-data script,
+        and SSH public keys that will be provided to the VM via the metadata service.
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VMMetadataCreate'
+      responses:
+        '200':
+          description: Metadata updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VMMetadata'
+        '404':
+          description: VM not found
+    get:
+      tags: [vms]
+      summary: Get VM metadata
+      operationId: getVMMetadata
+      description: Get VM metadata (hostname, user-data, SSH keys) for cloud-init.
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: VM metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VMMetadata'
+        '404':
+          description: VM not found
+    delete:
+      tags: [vms]
+      summary: Clear VM metadata
+      operationId: deleteVMMetadata
+      description: Remove all metadata for a VM.
+      parameters:
+        - name: vm_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Metadata cleared
+        '404':
+          description: VM not found
 
   /disks:
     post:
@@ -519,6 +584,44 @@ components:
           type: string
           description: Optional message (e.g., if console file not found)
       required: [vm_id, console, size]
+    VMMetadataCreate:
+      type: object
+      properties:
+        hostname:
+          type: string
+          description: VM hostname for cloud-init
+          nullable: true
+        user_data:
+          type: string
+          description: Cloud-init user-data script (will be base64 encoded by metadata service)
+          nullable: true
+        ssh_keys:
+          type: string
+          description: SSH public keys (newline-separated) for cloud-init
+          nullable: true
+    VMMetadata:
+      type: object
+      properties:
+        vm_id:
+          type: string
+        hostname:
+          type: string
+          nullable: true
+        user_data:
+          type: string
+          nullable: true
+        ssh_keys:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [vm_id]
     HealthStatus:
       type: object
       properties:

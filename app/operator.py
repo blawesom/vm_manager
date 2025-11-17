@@ -438,6 +438,11 @@ class LocalOperator(OperatorInterface):
             import hashlib
             mac_hash = hashlib.md5(vm_id.encode()).hexdigest()[:6]
             mac = f"52:54:{mac_hash[0:2]}:{mac_hash[2:4]}:{mac_hash[4:6]}:00"
+            
+            # Store MAC address for metadata service lookup
+            (vm_dir / "mac.txt").write_text(mac)
+            logger.debug(f"Stored MAC address {mac} for VM {vm_id}")
+            
             # Use TAP interface with bridge
             cmd.extend([
                 "-netdev", f"tap,id=net0,ifname={tap_name},script=no,downscript=no",

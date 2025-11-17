@@ -43,3 +43,18 @@ class VMConsole(BaseModel):
     size: int
     file_size: Optional[int] = None
     message: Optional[str] = None
+
+class VMMetadataCreate(BaseModel):
+    hostname: Optional[str] = None
+    user_data: Optional[str] = None  # cloud-init user-data script
+    ssh_keys: Optional[str] = None  # newline-separated SSH public keys
+
+class VMMetadata(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    vm_id: str
+    hostname: Optional[str]
+    user_data: Optional[str]
+    ssh_keys: Optional[str]
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

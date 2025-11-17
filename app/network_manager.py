@@ -102,14 +102,13 @@ class NetworkManager:
             logger.info(f"dry-run: would ensure bridge {self.bridge_name}")
             return
         
-        if self._interface_exists(self.bridge_name):
-            logger.debug(f"Bridge {self.bridge_name} already exists")
-            return
+        bridge_exists = self._interface_exists(self.bridge_name)
         
-        # Create bridge
-        logger.info(f"Creating bridge {self.bridge_name}")
-        self._run_command(["ip", "link", "add", "name", self.bridge_name, "type", "bridge"])
-        self._run_command(["ip", "link", "set", self.bridge_name, "up"])
+        if not bridge_exists:
+            # Create bridge
+            logger.info(f"Creating bridge {self.bridge_name}")
+            self._run_command(["ip", "link", "add", "name", self.bridge_name, "type", "bridge"])
+            self._run_command(["ip", "link", "set", self.bridge_name, "up"])
         
         # Configure bridge IP (gateway)
         if not self._has_ip(self.bridge_name, self.gateway):
@@ -118,6 +117,19 @@ class NetworkManager:
                 "ip", "addr", "add", f"{self.gateway}/{self.subnet.prefixlen}",
                 "dev", self.bridge_name
             ])
+        
+        # Configure metadata service IP (169.254.169.254) on bridge
+        metadata_ip = "169.254.169.254"
+        if not self._has_ip(self.bridge_name, metadata_ip):
+            logger.info(f"Configuring metadata service IP: {metadata_ip} on bridge")
+            try:
+                self._run_command([
+                    "ip", "addr", "add", f"{metadata_ip}/32",
+                    "dev", self.bridge_name
+                ])
+            except RuntimeError as e:
+                # If IP already exists or other error, log but don't fail
+                logger.warning(f"Could not add metadata IP {metadata_ip} to bridge: {e}")
     
     def _has_ip(self, interface: str, ip: str) -> bool:
         """Check if interface has the specified IP."""
